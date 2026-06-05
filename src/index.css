@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  /* Force cursor: pointer on interactive and clickable elements globally */
+  button,
+  [role="button"],
+  select,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="checkbox"],
+  input[type="radio"],
+  .clickable-card {
+    cursor: pointer !important;
+  }
+}
