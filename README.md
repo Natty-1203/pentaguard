@@ -36,9 +36,12 @@ A SaaS insurance management platform built with React and Express. Supports mult
 
 
 ## Screenshots
-
+    **Admin**
  ![Admin](assets/screenshots/admin.png)
+    **Super Admin**
  ![Super Admin](assets/screenshots/superadmin.png)
+    **Agents**
  ![Agent](assets/screenshots/agent.png)
+    **Claim Staffs**
  ![Claim](assets/screenshots/claim.png) 
 
