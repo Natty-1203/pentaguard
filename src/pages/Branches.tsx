@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function BranchesPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,7 +27,7 @@ export default function BranchesPage() {
 
   const fetchBranches = async () => {
     try {
-      const res = await fetch('/api/branches-with-stats');
+      const res = await fetch(`/api/branches-with-stats?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const rawData = await res.json();
 
@@ -71,7 +73,7 @@ export default function BranchesPage() {
     e.preventDefault();
     if (!newBranch.name) return;
     try {
-      const res = await fetch('/api/branches', {
+      const res = await fetch(`/api/branches?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,7 +96,7 @@ export default function BranchesPage() {
     e.preventDefault();
     if (!editingBranch) return;
     try {
-      const res = await fetch(`/api/branches/${editingBranch.dbId}`, {
+      const res = await fetch(`/api/branches/${editingBranch.dbId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,7 +117,7 @@ export default function BranchesPage() {
 
   const handleDelete = async (id: string, dbId: number) => {
     try {
-      const res = await fetch(`/api/branches/${dbId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/branches/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchBranches();
       }
@@ -153,21 +155,21 @@ export default function BranchesPage() {
             <form onSubmit={handleAddBranch} className="p-4 space-y-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 block mb-1">Branch Name</label>
-                <Input required value={newBranch.name} onChange={e => setNewBranch({...newBranch, name: e.target.value})} placeholder="e.g. Bole Main Branch" />
+                <Input required value={newBranch.name} onChange={e => setNewBranch({...newBranch, name: e.target.value})} placeholder="Branch name" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-semibold text-gray-700 block mb-1">Region</label>
-                  <Input value={newBranch.region} onChange={e => setNewBranch({...newBranch, region: e.target.value})} placeholder="e.g. Addis Ababa" />
+                  <Input value={newBranch.region} onChange={e => setNewBranch({...newBranch, region: e.target.value})} placeholder="City" />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-gray-700 block mb-1">City</label>
-                  <Input value={newBranch.city} onChange={e => setNewBranch({...newBranch, city: e.target.value})} placeholder="e.g. Addis Ababa" />
+                  <Input value={newBranch.city} onChange={e => setNewBranch({...newBranch, city: e.target.value})} placeholder="City" />
                 </div>
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 block mb-1">Phone Number</label>
-                <Input value={newBranch.phone} onChange={e => setNewBranch({...newBranch, phone: e.target.value})} placeholder="e.g. +251 11 111 2222" />
+                <Input value={newBranch.phone} onChange={e => setNewBranch({...newBranch, phone: e.target.value})} placeholder="Phone number" />
               </div>
               <div className="pt-4 flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
@@ -364,7 +366,7 @@ export default function BranchesPage() {
                   required 
                   value={editingBranch.name} 
                   onChange={e => setEditingBranch({...editingBranch, name: e.target.value})} 
-                  placeholder="e.g. Bole Main Branch" 
+                  placeholder="Branch name" 
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -373,7 +375,7 @@ export default function BranchesPage() {
                   <Input 
                     value={editingBranch.region} 
                     onChange={e => setEditingBranch({...editingBranch, region: e.target.value})} 
-                    placeholder="e.g. Addis Ababa" 
+                    placeholder="City" 
                   />
                 </div>
                 <div>
@@ -381,7 +383,7 @@ export default function BranchesPage() {
                   <Input 
                     value={editingBranch.city} 
                     onChange={e => setEditingBranch({...editingBranch, city: e.target.value})} 
-                    placeholder="e.g. Addis Ababa" 
+                    placeholder="City" 
                   />
                 </div>
               </div>

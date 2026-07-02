@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Plus, Eye, Edit2, MoreVertical, ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
 import { Input } from '@/src/components/ui/input';
@@ -7,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/src/components/ui/badge';
 
 export default function PoliciesPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -30,7 +32,7 @@ export default function PoliciesPage() {
 
   const fetchPolicies = async () => {
     try {
-      const res = await fetch('/api/policies');
+      const res = await fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const rawData = await res.json();
       
@@ -55,7 +57,7 @@ export default function PoliciesPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const fetchCustomers = async () => {
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const data = await res.json();
         setCustomers(data);
@@ -83,7 +85,7 @@ export default function PoliciesPage() {
 
   const handleDelete = async (id: string, dbId: number) => {
     try {
-      const res = await fetch(`/api/policies/${dbId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/policies/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchPolicies();
       }
@@ -96,7 +98,7 @@ export default function PoliciesPage() {
     e.preventDefault();
     if (!newPolicy.customerName) return;
     try {
-      const res = await fetch('/api/policies', {
+      const res = await fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +126,7 @@ export default function PoliciesPage() {
       numericPremium = Number(numericPremium.replace(/[^0-9.-]+/g,""));
     }
     try {
-      const res = await fetch(`/api/policies/${editingPolicy.dbId}`, {
+      const res = await fetch(`/api/policies/${editingPolicy.dbId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -427,7 +429,7 @@ export default function PoliciesPage() {
                   required 
                   value={newPolicy.customerName} 
                   onChange={(e) => setNewPolicy({ ...newPolicy, customerName: e.target.value })} 
-                  placeholder="e.g. Mulugeta Yohannes" 
+                  placeholder="Customer name" 
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -464,7 +466,7 @@ export default function PoliciesPage() {
                   required
                   value={newPolicy.premium} 
                   onChange={(e) => setNewPolicy({ ...newPolicy, premium: e.target.value })} 
-                  placeholder="e.g. 15000" 
+                  placeholder="Amount" 
                 />
               </div>
               <div className="pt-2 flex justify-end gap-2 border-t border-gray-100">
@@ -493,7 +495,7 @@ export default function PoliciesPage() {
                   required 
                   value={editingPolicy.customerName} 
                   onChange={(e) => setEditingPolicy({ ...editingPolicy, customerName: e.target.value })} 
-                  placeholder="e.g. Mulugeta Yohannes" 
+                  placeholder="Customer name" 
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -530,7 +532,7 @@ export default function PoliciesPage() {
                   required
                   value={editingPolicy.premium !== undefined && editingPolicy.premium !== null ? editingPolicy.premium.toString().replace(/[^0-9.-]+/g,"") : ''} 
                   onChange={(e) => setEditingPolicy({ ...editingPolicy, premium: e.target.value })} 
-                  placeholder="e.g. 15000" 
+                  placeholder="Amount" 
                 />
               </div>
               <div className="pt-2 flex justify-end gap-2 border-t border-gray-100">

@@ -70,12 +70,8 @@ export default function SaaSInvoicesPage() {
   useEffect(() => {
     fetchAllData();
   }, []);
-
-  // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<any>(null);
-
-  // New Invoice Form state
   const [formCompany, setFormCompany] = useState('');
   const [formPlan, setFormPlan] = useState('');
   const [formAmount, setFormAmount] = useState('');
@@ -84,19 +80,13 @@ export default function SaaSInvoicesPage() {
   const [formStatus, setFormStatus] = useState('Pending');
 
   const filters = ['All', 'Paid', 'Pending', 'Overdue', 'Unpaid', 'Draft'];
-
-  // Helper to parse numeric values from "ETB 150,000" or similar
   const parseAmount = (amtStr: string) => {
     const cleanNum = amtStr.replace(/[^0-9]/g, '');
     return parseInt(cleanNum) || 0;
   };
-
-  // Dynamic KPI calculations
   const totalInvoiced = data.reduce((acc, curr) => acc + parseAmount(curr.amount), 0);
   const totalPaid = data.filter(i => i.status === 'Paid').reduce((acc, curr) => acc + parseAmount(curr.amount), 0);
   const totalOverdue = data.filter(i => i.status === 'Overdue').reduce((acc, curr) => acc + parseAmount(curr.amount), 0);
-
-  // Filter application
   const filteredData = data.filter(item => {
     const matchesFilter = activeFilter === 'All' || item.status === activeFilter;
     const matchesSearch = item.company.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -278,7 +268,7 @@ export default function SaaSInvoicesPage() {
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-gray-400 hover:text-blue-600 transition-colors"
-                          onClick={() => alert(`Simulating invoice PDF generation for ${row.id}... Success!`)}
+                          onClick={() => console.info(`Simulating invoice PDF generation for ${row.id}... Success!`)}
                         >
                           <Download className="w-4 h-4" />
                         </Button>
@@ -389,18 +379,18 @@ export default function SaaSInvoicesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Amount Due (ETB) *</label>
-                  <Input type="text" required placeholder="e.g. 15,000" value={formAmount} onChange={e => setFormAmount(e.target.value)} className="h-10 text-xs font-bold text-gray-900" />
+                  <Input type="text" required placeholder="Amount" value={formAmount} onChange={e => setFormAmount(e.target.value)} className="h-10 text-xs font-bold text-gray-900" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Issued Date *</label>
-                  <Input type="text" required placeholder="e.g. May 15, 2024" value={formIssued} onChange={e => setFormIssued(e.target.value)} className="h-10 text-xs" />
+                  <Input type="text" required placeholder="Start date" value={formIssued} onChange={e => setFormIssued(e.target.value)} className="h-10 text-xs" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Due Date *</label>
-                  <Input type="text" required placeholder="e.g. May 29, 2024" value={formDue} onChange={e => setFormDue(e.target.value)} className="h-10 text-xs" />
+                  <Input type="text" required placeholder="End date" value={formDue} onChange={e => setFormDue(e.target.value)} className="h-10 text-xs" />
                 </div>
               </div>
 
@@ -507,7 +497,7 @@ export default function SaaSInvoicesPage() {
                     type="button" 
                     size="sm" 
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5"
-                    onClick={() => alert(`Document download initialized for ${viewingInvoice.id}! Check your local system directories.`)}
+                    onClick={() => console.info(`Document download initialized for ${viewingInvoice.id}! Check your local system directories.`)}
                   >
                     <Download className="w-3.5 h-3.5" /> Download PDF
                   </Button>

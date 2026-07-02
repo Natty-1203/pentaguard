@@ -35,8 +35,6 @@ export default function SubscriptionPlansPage() {
   useEffect(() => {
     fetchPlans();
   }, []);
-
-  // Form states
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [interval, setIntervalVal] = useState('per month');
@@ -83,7 +81,6 @@ export default function SubscriptionPlansPage() {
 
     try {
       if (selectedPlan) {
-        // Edit
         const res = await fetch(`/api/subscription-plans/${parseInt(selectedPlan.id.replace('plan_',''), 10)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -95,7 +92,6 @@ export default function SubscriptionPlansPage() {
         });
         if (res.ok) await fetchPlans();
       } else {
-        // Create new
         const res = await fetch('/api/subscription-plans', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -241,7 +237,7 @@ export default function SubscriptionPlansPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">SaaS Name *</label>
-                  <Input type="text" required placeholder="e.g. Starter, Premium" value={name} onChange={e => setName(e.target.value)} className="h-10 text-xs font-semibold" />
+                  <Input type="text" required placeholder="Plan name" value={name} onChange={e => setName(e.target.value)} className="h-10 text-xs font-semibold" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">System Icon Style</label>
@@ -256,27 +252,27 @@ export default function SubscriptionPlansPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Rate Custom Charge *</label>
-                  <Input type="text" required placeholder="e.g. ETB 12,000" value={price} onChange={e => setPrice(e.target.value)} className="h-10 text-xs font-semibold" />
+                  <Input type="text" required placeholder="Price" value={price} onChange={e => setPrice(e.target.value)} className="h-10 text-xs font-semibold" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Interval Cycle</label>
-                  <Input type="text" placeholder="e.g. per month" value={interval} onChange={e => setIntervalVal(e.target.value)} className="h-10 text-xs font-semibold" />
+                  <Input type="text" placeholder="Billing period" value={interval} onChange={e => setIntervalVal(e.target.value)} className="h-10 text-xs font-semibold" />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-gray-550 font-bold uppercase tracking-wider text-[9px]">Subscription Tier Brief</label>
-                <textarea rows={2} required placeholder="Short summary describing ideal customer audience..." value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
+                <textarea rows={2} required placeholder="Target audience summary" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Capabilities (Comma-separated list)</label>
-                <textarea rows={2} required placeholder="Feature A, Feature B..." value={features} onChange={e => setFeatures(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
+                <textarea rows={2} required placeholder="List features" value={features} onChange={e => setFeatures(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Limitations (Comma-separated list, optional)</label>
-                <textarea rows={2} placeholder="Limitation A, Limitation B..." value={limitations} onChange={e => setLimitations(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
+                <textarea rows={2} placeholder="List limitations" value={limitations} onChange={e => setLimitations(e.target.value)} className="w-full bg-gray-55/40 text-gray-800 focus:bg-white text-xs border border-gray-200 p-2.5 rounded-lg font-medium" />
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-1">

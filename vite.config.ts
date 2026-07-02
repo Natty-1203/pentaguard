@@ -19,6 +19,7 @@ export default defineConfig(() => {
         '/api': {
           target: 'http://localhost:5001',
           changeOrigin: true,
+          cookieDomainRewrite: 'localhost',
         },
       },
       hmr: process.env.DISABLE_HMR !== 'true',

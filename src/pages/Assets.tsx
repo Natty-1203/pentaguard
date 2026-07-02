@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function AssetsPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [viewingAsset, setViewingAsset] = useState<any>(null);
@@ -21,8 +23,8 @@ export default function AssetsPage() {
   const fetchAssets = async () => {
     try {
       const [autoRes, homeRes] = await Promise.all([
-        fetch('/api/auto-assets'),
-        fetch('/api/home-assets')
+        fetch(`/api/auto-assets?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/home-assets?companyId=${selectedCompanyId ?? 1}`)
       ]);
       const autoData = autoRes.ok ? await autoRes.json() : [];
       const homeData = homeRes.ok ? await homeRes.json() : [];

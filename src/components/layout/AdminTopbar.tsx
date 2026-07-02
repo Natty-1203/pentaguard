@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Search, Bell, Mail, X, Check, Server, Shield, Sparkles, User, Settings, Database, LogOut, Menu } from 'lucide-react';
 import { Input } from '@/src/components/ui/input';
+import { useAuth } from '@/src/lib/AuthContext';
 
 interface AdminSearchResult {
   id: string;
@@ -13,26 +14,27 @@ interface AdminSearchResult {
 export default function AdminTopbar() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Interactive local states
+  const { user, logout } = useAuth();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showInbox, setShowInbox] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const roleLabel = (r: string) => {
+    if (r === 'super_admin') return 'Super Admin';
+    if (r === 'admin') return 'Company Admin';
+    if (r === 'agent') return 'Agent';
+    return 'Claim Staff';
+  };
 
-  // Live data from API
   const [companies, setCompanies] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [overdueInvoices, setOverdueInvoices] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
 
-  // Derived platform notifications from real overdue invoices + recent payments
   const [notifications, setNotifications] = useState<any[]>([]);
   const [inbox, setInbox] = useState<any[]>([]);
-
-  // Search results (companies, plans, invoices)
   const [searchResults, setSearchResults] = useState<{ companies: AdminSearchResult[]; plans: AdminSearchResult[]; invoices: AdminSearchResult[] }>({
     companies: [], plans: [], invoices: []
   });
@@ -41,8 +43,6 @@ export default function AdminTopbar() {
   const bellBoxRef = useRef<HTMLDivElement>(null);
   const mailBoxRef = useRef<HTMLDivElement>(null);
   const profileBoxRef = useRef<HTMLDivElement>(null);
-
-  // Load companies, plans, invoices, payments for live search + notifications
   useEffect(() => {
     const load = async () => {
       try {
@@ -102,7 +102,6 @@ export default function AdminTopbar() {
     load();
   }, []);
 
-  // Live admin search — filters loaded data client-side
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
@@ -150,8 +149,6 @@ export default function AdminTopbar() {
     ...searchResults.plans.map(r => ({ type: 'plan', result: r })),
     ...searchResults.invoices.map(r => ({ type: 'invoice', result: r }))
   ];
-
-  // Click outside to close triggers
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement;
@@ -171,8 +168,6 @@ export default function AdminTopbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Keyboard shortcut (⌘K or Ctrl + K) to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -380,12 +375,12 @@ export default function AdminTopbar() {
             className="flex items-center gap-3 cursor-pointer group"
           >
             <div className="hidden md:block text-right select-none">
-              <p className="text-xs font-bold text-gray-900 leading-tight">Yonas Girma</p>
-              <p className="text-[10px] text-gray-500 font-semibold mt-0.5 leading-none">Super Admin</p>
+              <p className="text-xs font-bold text-gray-900 leading-tight">{user ? `${user.firstName} ${user.lastName}` : 'Super Admin'}</p>
+              <p className="text-[10px] text-gray-500 font-semibold mt-0.5 leading-none">{user ? roleLabel(user.role) : 'Super Admin'}</p>
             </div>
             <img 
               src="https://i.pravatar.cc/150?u=superadmin" 
-              alt="Yonas Girma" 
+              alt={user ? `${user.firstName} ${user.lastName}` : 'Admin'} 
               className="w-9 h-9 rounded-full border border-gray-200 group-hover:scale-105 transition-transform"
             />
           </div>
@@ -393,8 +388,8 @@ export default function AdminTopbar() {
           {showProfile && (
             <div className="absolute right-0 top-[42px] mt-1.5 w-60 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-1 divide-y divide-gray-100 animate-in fade-in duration-100">
               <div className="px-3.5 py-2.5">
-                <p className="font-bold text-xs text-gray-900">Yonas Girma</p>
-                <p className="text-[10px] text-gray-400 mt-0.5 font-mono">y.girma@pentaguard.co</p>
+                <p className="font-bold text-xs text-gray-900">{user ? `${user.firstName} ${user.lastName}` : 'Super Admin'}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5 font-mono">{user?.email || ''}</p>
                 <div className="flex items-center gap-1.5 text-[9px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded mt-2.5 w-fit">
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Root Platform Level
                 </div>
@@ -407,24 +402,14 @@ export default function AdminTopbar() {
                 >
                   <Server className="w-3.5 h-3.5 text-gray-400" /> Infrastructure Config
                 </Link>
-                <button
-                  onClick={() => {
-                    alert("Diagnostics Snapshot:\nHost IP: 10.128.0.4\nPort: 3000\nDeployment: Cloud Run\nDB Driver: Stable Pool Ready");
-                    setShowProfile(false);
-                  }}
-                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  <Database className="w-3.5 h-3.5 text-gray-400" /> Dump Platform Specs
-                </button>
               </div>
               <div className="pt-1">
-                <Link
-                  to="/"
-                  onClick={() => setShowProfile(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50"
+                <button
+                  onClick={() => { logout(); navigate('/login'); }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="w-3.5 h-3.5" /> Terminate Super Admin
-                </Link>
+                </button>
               </div>
             </div>
           )}

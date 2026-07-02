@@ -1,5 +1,3 @@
-// PENTA GUARD - MOCK DATA STRUCTURE & DEFINITIONS
-
 export interface SimDatabase {
   specializations: any[];
   payment_methods: any[];
@@ -41,6 +39,8 @@ export interface SimDatabase {
   payments: any[];
   payment_schedules: any[];
   notifications: any[];
+  users: any[];
+  audit_log: any[];
 }
 
 export const defaultSimDb: SimDatabase = {
@@ -223,5 +223,12 @@ export const defaultSimDb: SimDatabase = {
   ],
   notifications: [
     { Notification_Id: 1, Customer_Id: 1, Policy_Id: 1, Claim_Id: null, Channel: 'SMS', Message_Type: 'Welcome', Message_Body: 'Dear Almaz, Nile Insurance S.C welcomes you! Your Motor Comprehensive POL-MTR-994101 is now active.', Sent_At: '2026-05-05T10:00:00Z', Status: 'Delivered' }
-  ]
+  ],
+  users: [
+    { User_Id: 1, Email: 'admin@nile.com', Password_Hash: '$2b$10$dXxG3eN7UoUComxaVF2pZOmyizYZvLyql.1ozVeRywfC1yWmzOvMq', Role: 'admin', Company_Id: 1, First_Name: 'Yonas', Last_Name: 'Girma', Status: 'Active', Created_At: '2026-01-01T00:00:00Z' },
+    { User_Id: 2, Email: 'agent@nile.com', Password_Hash: '$2b$10$U.bHa4lriTSYqESJGqlGu.E9nMirrssooWtEs3ThZxixWIegnSIQq', Role: 'agent', Company_Id: 1, First_Name: 'Abebe', Last_Name: 'Kebede', Status: 'Active', Created_At: '2026-01-01T00:00:00Z' },
+    { User_Id: 3, Email: 'claims@nile.com', Password_Hash: '$2b$10$JpiZ15MXqx4sJ0fCJs324u6phRGrasAfSIZsdkI2I9irYg1xtoWuS', Role: 'claim_staff', Company_Id: 1, First_Name: 'Tewodros', Last_Name: 'Hailu', Status: 'Active', Created_At: '2026-01-01T00:00:00Z' },
+    { User_Id: 4, Email: 'super@pentaguard.com', Password_Hash: '$2b$10$/pSBEZ.IxbwN9XK2OEGrUeta0rAYpOjhFlpHpGItFYiF0XP2MZKkK', Role: 'super_admin', Company_Id: null, First_Name: 'Super', Last_Name: 'Admin', Status: 'Active', Created_At: '2026-01-01T00:00:00Z' }
+  ],
+  audit_log: []
 };

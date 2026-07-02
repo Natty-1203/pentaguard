@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function CustomersPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -27,11 +29,10 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const rawData = await res.json();
 
-      // Map database schema to frontend component structure
       const mapped = rawData.map((dbRow: any, idx: number) => {
         const first = dbRow.First_Name || 'Generic';
         const last = dbRow.Last_Name || 'Customer';
@@ -75,7 +76,7 @@ export default function CustomersPage() {
 
   const handleDelete = async (id: string, dbId: number) => {
     try {
-      const res = await fetch(`/api/customers/${dbId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/customers/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
       if (res.ok) {
         await fetchCustomers();
       }
@@ -93,14 +94,13 @@ export default function CustomersPage() {
     const last = parts.slice(1).join(' ') || '';
 
     try {
-      const res = await fetch('/api/customers', {
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           First_Name: first,
           Last_Name: last,
           Email: newCustomer.email,
-          // phone and branch can be attached to dbRow structure if our mock DB accepts it
         })
       });
       if (res.ok) {
@@ -122,7 +122,7 @@ export default function CustomersPage() {
     const last = parts.slice(1).join(' ') || '';
 
     try {
-      const res = await fetch(`/api/customers/${editingCustomer.dbId}`, {
+      const res = await fetch(`/api/customers/${editingCustomer.dbId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -180,11 +180,11 @@ export default function CustomersPage() {
             <form onSubmit={handleAdd} className="p-4 space-y-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 block mb-1">Full Name</label>
-                <Input required value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} placeholder="e.g. Mulualem Tesfaye" />
+                <Input required value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} placeholder="Customer name" />
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 block mb-1">Email Address</label>
-                <Input type="email" value={newCustomer.email} onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })} placeholder="e.g. name@email.com" />
+                <Input type="email" value={newCustomer.email} onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })} placeholder="Email address" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -423,7 +423,7 @@ export default function CustomersPage() {
                   required
                   value={editingCustomer.name}
                   onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
-                  placeholder="e.g. Mulualem Tesfaye"
+                  placeholder="Customer name"
                 />
               </div>
               <div>
@@ -432,7 +432,7 @@ export default function CustomersPage() {
                   type="email"
                   value={editingCustomer.email}
                   onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
-                  placeholder="e.g. name@email.com"
+                  placeholder="Email address"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

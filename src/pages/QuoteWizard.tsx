@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -20,25 +21,21 @@ interface Customer {
   avatar: string;
 }
 
-// Customers now loaded from database via API – see useEffect below
 
 export default function QuoteWizardPage() {
-  // Wizard State Controls
+  const { selectedCompanyId } = useTenant();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [quoteId] = useState<string>(() => `QT-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`);
   
-  // Simulated database of customers in state – loaded from API
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customerSearch, setCustomerSearch] = useState<string>('');
   const [showAddNewCustomer, setShowAddNewCustomer] = useState<boolean>(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '', branch: 'Addis Ababa' });
   const [customerSuccessMessage, setCustomerSuccessMessage] = useState<string>('');
-
-  // Fetch customers from backend on mount
   const fetchCustomersList = async () => {
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch customers');
       const rawData = await res.json();
       const mapped: Customer[] = rawData.map((dbRow: any, idx: number) => {
@@ -66,11 +63,7 @@ export default function QuoteWizardPage() {
   useEffect(() => {
     fetchCustomersList();
   }, []);
-
-  // Step 2: Policy Type State
   const [insuranceType, setInsuranceType] = useState<string>('auto'); // auto, home, life, medical
-
-  // Step 3: Combined Form States for different types
   const [autoForm, setAutoForm] = useState({
     make: '',
     model: '',
@@ -108,37 +101,24 @@ export default function QuoteWizardPage() {
     preferredTier: 'Tier A (Private Premium)',
     policyTerm: '1 Year'
   });
-
-  // Step 4: Coverage Premium Selections
   const [selectedPlan, setSelectedPlan] = useState<string>('standard');
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-
-  // Step 5: Remarks etc.
   const [agentRemarks, setAgentRemarks] = useState<string>('');
   const [certificationChecked, setCertificationChecked] = useState<boolean>(false);
-
-  // Success screen trigger after creation
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [successQuoteData, setSuccessQuoteData] = useState<any>(null);
-
-  // Dynamic message/toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Trigger brief auto-clearing toast helper
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
-
-  // Resolve currently active customer object
   const activeCustomer = useMemo(() => {
     return customers.find(c => c.id === selectedCustomerId) || customers[0] || {
       id: '...', dbId: 0, name: 'Loading...', email: '...', phone: '...', branch: '...', avatar: 'https://ui-avatars.com/api/?name=Loading&background=gray'
     };
   }, [selectedCustomerId, customers]);
 
-  // Handle addition of customer – POST to backend
   const handleAddNewCustomerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustomer.name || !newCustomer.phone) {
@@ -151,7 +131,7 @@ export default function QuoteWizardPage() {
     const lastName = parts.slice(1).join(' ') || '';
 
     try {
-      const res = await fetch('/api/customers', {
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,7 +141,6 @@ export default function QuoteWizardPage() {
         })
       });
       if (res.ok) {
-        // Re-fetch the full list so we get the generated ID from the DB
         await fetchCustomersList();
         setShowAddNewCustomer(false);
         setNewCustomer({ name: '', email: '', phone: '', branch: 'Addis Ababa' });
@@ -174,8 +153,6 @@ export default function QuoteWizardPage() {
       setErrorMessage('Failed to register customer. Please try again.');
     }
   };
-
-  // Filter customers by search term
   const filteredCustomersList = useMemo(() => {
     if (!customerSearch) return customers;
     return customers.filter(c => 
@@ -185,8 +162,6 @@ export default function QuoteWizardPage() {
       c.phone.includes(customerSearch)
     );
   }, [customers, customerSearch]);
-
-  // Premium computation logic dynamically reacting to state!
   const premiumsCalculated = useMemo(() => {
     let base = 0;
     let categoryLabel = '';
@@ -209,8 +184,6 @@ export default function QuoteWizardPage() {
       base = 5000 + (size * 1800) + (age > 50 ? 2500 : 0);
       categoryLabel = 'Medical Insurance';
     }
-
-    // Adjust price according to plan (basic, standard, premium)
     let planRate = base;
     let planName = 'Comprehensive';
     if (selectedPlan === 'basic') {
@@ -220,8 +193,6 @@ export default function QuoteWizardPage() {
       planRate = base * 1.35;
       planName = 'Elite Comprehensive';
     }
-
-    // Dynamic Addons
     let addonsTotal = 0;
     const computedAddonsList: { id: string; name: string; cost: number }[] = [];
 
@@ -274,8 +245,6 @@ export default function QuoteWizardPage() {
       categoryLabel
     };
   }, [insuranceType, autoForm, homeForm, lifeForm, medicalForm, selectedPlan, selectedAddons]);
-
-  // Validation before going to next step
   const handleNextStep = () => {
     setErrorMessage(null);
 
@@ -294,7 +263,6 @@ export default function QuoteWizardPage() {
     }
 
     if (currentStep === 3) {
-      // Validate asset fields
       if (insuranceType === 'auto') {
         if (!autoForm.make || !autoForm.model || !autoForm.year || !autoForm.licensePlate || !autoForm.value) {
           setErrorMessage('Please fill in all required fields marked with *');
@@ -361,7 +329,7 @@ export default function QuoteWizardPage() {
     }
 
     try {
-      await fetch('/api/quotes', {
+      await fetch(`/api/quotes?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -404,8 +372,6 @@ export default function QuoteWizardPage() {
     setSuccessQuoteData(null);
     setErrorMessage(null);
   };
-
-  // Compute overall percentage of wizard complete
   const progressPercent = useMemo(() => {
     return (currentStep / 5) * 100;
   }, [currentStep]);
@@ -586,7 +552,7 @@ export default function QuoteWizardPage() {
                           <label className="text-[11px] font-semibold text-gray-600">Full Name</label>
                           <Input 
                             required
-                            placeholder="e.g., Almaz Teshome" 
+                            placeholder="Full name" 
                             value={newCustomer.name} 
                             onChange={e => setNewCustomer({...newCustomer, name: e.target.value})}
                             className="text-xs h-9 bg-white"
@@ -596,7 +562,7 @@ export default function QuoteWizardPage() {
                           <label className="text-[11px] font-semibold text-gray-600">Phone Number</label>
                           <Input 
                             required
-                            placeholder="e.g., +251 91 122 3344" 
+                            placeholder="Phone number" 
                             value={newCustomer.phone} 
                             onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})}
                             className="text-xs h-9 bg-white"
@@ -606,7 +572,7 @@ export default function QuoteWizardPage() {
                           <label className="text-[11px] font-semibold text-gray-600">Email Address</label>
                           <Input 
                             type="email"
-                            placeholder="e.g., almaz@gmail.com" 
+                            placeholder="Email address" 
                             value={newCustomer.email} 
                             onChange={e => setNewCustomer({...newCustomer, email: e.target.value})}
                             className="text-xs h-9 bg-white"
@@ -815,7 +781,7 @@ export default function QuoteWizardPage() {
                           required
                           value={autoForm.model} 
                           onChange={e => setAutoForm({...autoForm, model: e.target.value})}
-                          placeholder="e.g. Land Cruiser, RAV4" 
+                          placeholder="Vehicle make and model" 
                           className="text-xs h-10"
                         />
                       </div>
@@ -836,7 +802,7 @@ export default function QuoteWizardPage() {
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Plate Number <span className="text-red-500">*</span></label>
                         <Input 
-                          placeholder="e.g. AA 3-A2819" 
+                          placeholder="Plate number" 
                           value={autoForm.licensePlate} 
                           onChange={e => setAutoForm({...autoForm, licensePlate: e.target.value})}
                           className="text-xs h-10 font-bold border-blue-200"
@@ -846,7 +812,7 @@ export default function QuoteWizardPage() {
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold text-gray-700 uppercase">VIN Number (Chassis)</label>
                         <Input 
-                          placeholder="e.g., JT3HN86R1X02..." 
+                          placeholder="VIN number" 
                           value={autoForm.vin} 
                           onChange={e => setAutoForm({...autoForm, vin: e.target.value})}
                           className="text-xs h-10 font-mono"
@@ -880,7 +846,7 @@ export default function QuoteWizardPage() {
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Engine Displacement (CC)</label>
                         <div className="relative">
                           <Input 
-                            placeholder="e.g. 4000, 1600" 
+                            placeholder="Engine capacity" 
                             value={autoForm.engine} 
                             onChange={e => setAutoForm({...autoForm, engine: e.target.value})}
                             className="pr-10 text-xs h-10"
@@ -898,7 +864,7 @@ export default function QuoteWizardPage() {
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Construction Year <span className="text-red-500">*</span></label>
                         <Input 
                           type="number" 
-                          placeholder="e.g. 2018" 
+                          placeholder="Year" 
                           value={homeForm.buildYear} 
                           onChange={e => setHomeForm({...homeForm, buildYear: e.target.value})}
                           className="text-xs h-10"
@@ -909,7 +875,7 @@ export default function QuoteWizardPage() {
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Number of Floors <span className="text-red-500">*</span></label>
                         <Input 
                           type="number" 
-                          placeholder="e.g. 2" 
+                          placeholder="Number" 
                           value={homeForm.floors} 
                           onChange={e => setHomeForm({...homeForm, floors: e.target.value})}
                           className="text-xs h-10"
@@ -921,7 +887,7 @@ export default function QuoteWizardPage() {
                         <div className="relative">
                           <MapPin className="w-4 h-4 text-gray-450 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                           <Input 
-                            placeholder="e.g. Bole Subcity, Woreda 03, House #1029, Addis Ababa" 
+                            placeholder="Full address" 
                             value={homeForm.address} 
                             onChange={e => setHomeForm({...homeForm, address: e.target.value})}
                             className="text-xs h-10 pl-9"
@@ -1010,7 +976,7 @@ export default function QuoteWizardPage() {
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Current Occupation / Field <span className="text-red-500">*</span></label>
                         <Input 
-                          placeholder="e.g. Civil Engineer, Retail Agent" 
+                          placeholder="Occupation" 
                           value={lifeForm.occupation} 
                           onChange={e => setLifeForm({...lifeForm, occupation: e.target.value})}
                           className="text-xs h-10"
@@ -1033,7 +999,7 @@ export default function QuoteWizardPage() {
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Primary Beneficiary Name <span className="text-red-500">*</span></label>
                         <Input 
-                          placeholder="e.g. Wubit Hailu" 
+                          placeholder="Beneficiary name" 
                           value={lifeForm.beneficiaryName} 
                           onChange={e => setLifeForm({...lifeForm, beneficiaryName: e.target.value})}
                           className="text-xs h-10 animate-in"
@@ -1088,7 +1054,7 @@ export default function QuoteWizardPage() {
                       <div className="space-y-1.5 md:col-span-2">
                         <label className="text-[11px] font-bold text-gray-700 uppercase">Declared Pre-existing Medical Conditions</label>
                         <Input 
-                          placeholder="e.g. Hypertension, Managed Diabetes, Asthma (Separate by commas, or specify None)" 
+                          placeholder="Pre-existing conditions" 
                           value={medicalForm.preExistingConditions} 
                           onChange={e => setMedicalForm({...medicalForm, preExistingConditions: e.target.value})}
                           className="text-xs h-10"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
@@ -11,16 +12,16 @@ import {
 import { StatusBadge } from '@/src/components/ui/status-badge';
 
 export default function WorkflowsOverviewPage() {
+  const { selectedCompanyId } = useTenant();
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchClaims = async () => {
       try {
-        const res = await fetch('/api/claims');
+        const res = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`);
         if (res.ok) {
           const data = await res.json();
-          // Filter for active claims that need workflow management
           const activeClaims = data.filter((c: any) => c.Status !== 'Closed' && c.Status !== 'Rejected');
           setClaims(activeClaims);
         }

@@ -7,7 +7,6 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Define default postgres connection config
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -19,12 +18,10 @@ const dbConfig = {
 
 let pool: pg.Pool | null = null;
 
-// connect to real Postgres database
 try {
   const hasConfig = process.env.DATABASE_URL || process.env.DB_HOST;
   if (hasConfig) {
     pool = new Pool(dbConfig);
-    // Simple diagnostic query to test connection
     pool.query('SELECT NOW()', (err) => {
       if (err) {
         console.warn('⚠️ Real PostgreSQL configured but could not connect. Falling back to local database engine.', err.message);
@@ -45,13 +42,12 @@ try {
   dbState.isRealPostgres = false;
 }
 
-// Global query interceptor to simulate SQL results or execute on active database pool
 export async function executeQuery(text: string, params: any[] = []): Promise<{ rows: any[] }> {
   if (dbState.isRealPostgres && pool) {
     try {
       const res = await pool.query(text, params);
       
-      // Auto-map Postgres lowercase rows to Pascal_Case used by frontend
+      // Map Postgres snake_case to PascalCase for frontend
       const mappedRows = res.rows.map((row: any) => {
         const newRow = { ...row };
         for (const key in row) {
@@ -70,8 +66,7 @@ export async function executeQuery(text: string, params: any[] = []): Promise<{ 
     }
   }
 
-  return executeSimulatedQuery(text);
+  return executeSimulatedQuery(text, params);
 }
 
-// Exports dbService helper actions directly for consumer compatibility
 export { dbService } from './db_service';

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -9,6 +10,7 @@ import { Mail, Phone, MapPin, Building, Edit2, ShieldCheck, Download, Award, Tre
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/src/components/ui/table';
 
 export default function AgentProfilePage() {
+  const { selectedCompanyId } = useTenant();
   const { id } = useParams();
   const rawId = id ? parseInt(id, 10) : NaN;
   const [activeTab, setActiveTab] = useState('Overview');
@@ -32,11 +34,11 @@ export default function AgentProfilePage() {
     if (!rawId || Number.isNaN(rawId)) return;
     try {
       const [agRes, polRes, comRes, brRes, perfRes] = await Promise.all([
-        fetch('/api/agents'),
-        fetch('/api/policies'),
-        fetch('/api/commissions'),
-        fetch('/api/branches'),
-        fetch('/api/agent-performance')
+        fetch(`/api/agents?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/commissions?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/branches?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/agent-performance?companyId=${selectedCompanyId ?? 1}`)
       ]);
       const agData = agRes.ok ? await agRes.json() : [];
       const polData = polRes.ok ? await polRes.json() : [];
@@ -108,7 +110,7 @@ export default function AgentProfilePage() {
     const last = parts.slice(1).join(' ') || '';
 
     try {
-      const res = await fetch(`/api/agents/${rawId}`, {
+      const res = await fetch(`/api/agents/${rawId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

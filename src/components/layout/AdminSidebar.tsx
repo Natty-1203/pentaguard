@@ -19,8 +19,6 @@ export default function AdminSidebar() {
   const location = useLocation();
   const [isOpenOnMobile, setIsOpenOnMobile] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Listen to mobile menu button toggle trigger
   useEffect(() => {
     const handleToggle = () => {
       setIsOpenOnMobile(prev => !prev);
@@ -28,8 +26,6 @@ export default function AdminSidebar() {
     window.addEventListener('toggle-admin-sidebar', handleToggle);
     return () => window.removeEventListener('toggle-admin-sidebar', handleToggle);
   }, []);
-
-  // Close slide-over when page is clicked
   useEffect(() => {
     setIsOpenOnMobile(false);
   }, [location.pathname]);
@@ -46,10 +42,8 @@ export default function AdminSidebar() {
 
       <aside className={cn(
         "bg-[#0f172a] text-slate-300 flex flex-col h-screen sticky top-0 shrink-0 z-50 transition-all duration-300 ease-in-out border-r border-slate-800",
-        // Responsive placements
         "fixed inset-y-0 left-0 lg:sticky lg:translate-x-0 lg:flex",
         isOpenOnMobile ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0",
-        // Desktop collapse state layouts
         isCollapsed ? "lg:w-20" : "lg:w-64"
       )}>
         
@@ -119,21 +113,6 @@ export default function AdminSidebar() {
           ))}
         </div>
 
-        {/* Bottom Actions */}
-        <div className="p-3 shrink-0 border-t border-white/5 select-none space-y-1.5">
-          <Link 
-            to="/" 
-            title="Switch back to Nile Insurance S.C Nile Admin Tenant board"
-            className={cn(
-              "flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-purple-400 font-extrabold bg-purple-950/30 hover:bg-purple-950/55 transition-colors border border-purple-900/30",
-              isCollapsed && !isOpenOnMobile ? "justify-center animate-pulse" : ""
-            )}
-          >
-            <ShieldCheck className="w-4.5 h-4.5 text-purple-500 shrink-0" />
-            {(!isCollapsed || isOpenOnMobile) && <span>Tenant Portal</span>}
-          </Link>
-
-        </div>
       </aside>
     </>
   );

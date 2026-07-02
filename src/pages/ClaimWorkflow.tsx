@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Check, Clock, Calendar, ArrowRight, UserCircle, Car, Settings, XCircle, AlertCircle } from 'lucide-react';
@@ -10,12 +11,13 @@ export default function ClaimWorkflowPage() {
   const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
   const [claim, setClaim] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { selectedCompanyId } = useTenant();
 
   const fetchWorkflow = async () => {
     try {
       const [wfRes, claimRes] = await Promise.all([
-        fetch(`/api/claims/${id}/workflow`),
-        fetch(`/api/claims`)
+        fetch(`/api/claims/${id}/workflow?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`)
       ]);
       
       const wfData = await wfRes.json();
@@ -37,8 +39,6 @@ export default function ClaimWorkflowPage() {
 
   const handleApproveStep = async () => {
     if (!claim) return;
-    
-    // Determine next step based on current count
     const stepMap: Record<number, string> = {
       1: 'Document_Check',
       2: 'Field_Inspection',
@@ -51,7 +51,7 @@ export default function ClaimWorkflowPage() {
     const nextStepName = stepMap[workflowSteps.length + 1] || 'Under_Review';
     
     try {
-      const res = await fetch(`/api/claims/${id}/workflow`, {
+      const res = await fetch(`/api/claims/${id}/workflow?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,7 +71,7 @@ export default function ClaimWorkflowPage() {
     if (!window.confirm('Are you sure you want to reject this claim?')) return;
     
     try {
-      const res = await fetch(`/api/claims/${id}/reject`, { method: 'POST' });
+      const res = await fetch(`/api/claims/${id}/reject?companyId=${selectedCompanyId ?? 1}`, { method: 'POST' });
       if (res.ok) fetchWorkflow();
     } catch (err) {
       console.error(err);

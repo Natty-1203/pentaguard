@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function AgentsPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +26,7 @@ export default function AgentsPage() {
 
   const fetchAgents = async () => {
     try {
-      const res = await fetch('/api/agent-performance');
+      const res = await fetch(`/api/agent-performance?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const rawData = await res.json();
 
@@ -43,8 +45,7 @@ export default function AgentsPage() {
       }));
 
       if (mapped.length === 0) {
-        // Fall back to /api/agents for license numbers if performance endpoint is empty
-        const fbRes = await fetch('/api/agents');
+        const fbRes = await fetch(`/api/agents?companyId=${selectedCompanyId ?? 1}`);
         if (fbRes.ok) {
           const fbData = await fbRes.json();
           const fbMapped = fbData.map((dbRow: any, idx: number) => ({
@@ -77,7 +78,7 @@ export default function AgentsPage() {
   const handleAddAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/agents', {
+      const res = await fetch(`/api/agents?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +101,7 @@ export default function AgentsPage() {
 
   const handleDeleteAgent = async (dbId: number) => {
     try {
-      const res = await fetch(`/api/agents/${dbId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/agents/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
       if (res.ok) await fetchAgents();
     } catch (err) {
       console.error(err);
@@ -189,7 +190,7 @@ export default function AgentsPage() {
               </div>
               <div>
                 <label className="block text-gray-700 font-bold mb-1.5">License Number</label>
-                <Input required value={newAgent.licenseNo} onChange={e => setNewAgent(prev => ({...prev, licenseNo: e.target.value}))} placeholder="LIC-XXX-XXX" />
+                <Input required value={newAgent.licenseNo} onChange={e => setNewAgent(prev => ({...prev, licenseNo: e.target.value}))} placeholder="License number" />
               </div>
               <div className="flex justify-end pt-2">
                 <Button type="button" variant="outline" className="mr-2" onClick={() => setIsAddOpen(false)}>Cancel</Button>

@@ -77,18 +77,12 @@ export default function CompanyRegistryPage() {
   useEffect(() => {
     fetchCompanies();
   }, []);
-
-  // Modals state
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [isAddEditPlanOpen, setIsAddEditPlanOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-
-  // Forms state
   const [newCompany, setNewCompany] = useState({ name: '', location: '', plan: 'Professional', status: 'active', users: '10', policies: '150', revenue: '7,999' });
   const [planForm, setPlanForm] = useState({ name: '', badge: 'Basic', price: 'ETB 5,000', features: '', disabledFeatures: '', subscribers: '0' });
-
-  // Pricing plans state
   const [pricingPlans, setPricingPlans] = useState([
   { id: 'plan_starter', name: 'Starter', badge: 'Basic', price: 'ETB 2,999', subscribers: 2, features: ['Up to 10 users', 'Up to 500 policies', 'Basic claims management', 'Email support'], disabledFeatures: ['Advanced analytics', 'API access'] },
   { id: 'plan_professional', name: 'Professional', badge: 'Pro', mostPopular: true, price: 'ETB 7,999', subscribers: 18, features: ['Up to 100 users', 'Unlimited policies', 'Full claims workflow', 'Advanced analytics & reports', 'Priority support'], disabledFeatures: ['White-labeling'] },
@@ -167,7 +161,6 @@ export default function CompanyRegistryPage() {
     const limitFeats = planForm.disabledFeatures.split(',').map(f => f.trim()).filter(Boolean);
 
     if (selectedPlan) {
-      // Editing existing plan
       setPricingPlans(pricingPlans.map(p => p.id === selectedPlan.id ? {
         ...p,
         name: planForm.name,
@@ -178,7 +171,6 @@ export default function CompanyRegistryPage() {
         subscribers: parseInt(planForm.subscribers) || 0
       } : p));
     } else {
-      // Creating a new plan
       const newId = `plan_${planForm.name.toLowerCase().replace(/\s+/g, '_')}`;
       const created = {
         id: newId,
@@ -221,8 +213,6 @@ export default function CompanyRegistryPage() {
     });
     setIsAddEditPlanOpen(true);
   };
-
-  // KPI counters
   const totalCount = companies.length;
   const activeCount = companies.filter(c => c.status === 'active').length;
   const suspendedCount = companies.filter(c => c.status === 'suspended').length;
@@ -300,7 +290,7 @@ export default function CompanyRegistryPage() {
                 <button onClick={() => { setActiveFilter('Trial'); setCurrentPage(1); }} className={`px-4 py-1.5 text-xs font-semibold rounded-md ${activeFilter === 'Trial' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>Trial</button>
              </div>
            </div>
-           <Button onClick={() => { alert("Exporting Company Registry list directly into CSV..."); }} variant="outline" className="hidden gap-2 text-gray-700 w-full sm:w-auto">
+           <Button onClick={() => { console.info("Exporting Company Registry list directly into CSV..."); }} variant="outline" className="hidden gap-2 text-gray-700 w-full sm:w-auto">
              <Download className="w-4 h-4" />
              Export
            </Button>
@@ -503,7 +493,7 @@ export default function CompanyRegistryPage() {
                   <Input 
                     type="text" 
                     required 
-                    placeholder="e.g. Nile Insurance Company" 
+                    placeholder="Company name" 
                     value={newCompany.name} 
                     onChange={e => setNewCompany({ ...newCompany, name: e.target.value })} 
                     className="h-10 text-xs"
@@ -514,7 +504,7 @@ export default function CompanyRegistryPage() {
                   <Input 
                     type="text" 
                     required 
-                    placeholder="e.g. Addis Ababa" 
+                    placeholder="City" 
                     value={newCompany.location} 
                     onChange={e => setNewCompany({ ...newCompany, location: e.target.value })} 
                     className="h-10 text-xs"
@@ -700,7 +690,7 @@ export default function CompanyRegistryPage() {
                   <Input 
                     type="text" 
                     required 
-                    placeholder="e.g. Starter, Premium" 
+                    placeholder="Plan name" 
                     value={planForm.name} 
                     onChange={e => setPlanForm({ ...planForm, name: e.target.value })} 
                     className="h-10 text-xs"
@@ -711,7 +701,7 @@ export default function CompanyRegistryPage() {
                   <Input 
                     type="text" 
                     required 
-                    placeholder="e.g. Pro, Basic, Custom" 
+                    placeholder="Plan tier" 
                     value={planForm.badge} 
                     onChange={e => setPlanForm({ ...planForm, badge: e.target.value })} 
                     className="h-10 text-xs"
@@ -725,7 +715,7 @@ export default function CompanyRegistryPage() {
                   <Input 
                     type="text" 
                     required 
-                    placeholder="e.g. ETB 12,500" 
+                    placeholder="Price" 
                     value={planForm.price} 
                     onChange={e => setPlanForm({ ...planForm, price: e.target.value })} 
                     className="h-10 text-xs"
@@ -735,7 +725,7 @@ export default function CompanyRegistryPage() {
                   <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Subscribers Offset</label>
                   <Input 
                     type="number" 
-                    placeholder="e.g. 0" 
+                    placeholder="Numeric value" 
                     value={planForm.subscribers} 
                     onChange={e => setPlanForm({ ...planForm, subscribers: e.target.value })} 
                     className="h-10 text-xs"
@@ -747,7 +737,7 @@ export default function CompanyRegistryPage() {
                 <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Enabled System Benefits (Comma separated)</label>
                 <textarea 
                   required
-                  placeholder="e.g. Unlimited users, SLA validation support, Priority billing" 
+                  placeholder="Feature description" 
                   value={planForm.features}
                   rows={2} 
                   onChange={e => setPlanForm({ ...planForm, features: e.target.value })} 
@@ -758,7 +748,7 @@ export default function CompanyRegistryPage() {
               <div className="space-y-1.5">
                 <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Restricted Limitations (Comma separated)</label>
                 <textarea 
-                  placeholder="e.g. No API validation logs, No customizable branding" 
+                  placeholder="Limitation description" 
                   value={planForm.disabledFeatures}
                   rows={2} 
                   onChange={e => setPlanForm({ ...planForm, disabledFeatures: e.target.value })} 

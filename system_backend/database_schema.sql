@@ -1,5 +1,4 @@
 
--- Drop in reverse order if re-running
 DROP TABLE IF EXISTS
     NOTIFICATIONS, PAYMENT_SCHEDULES, PAYMENTS,
     DOCUMENTS, CLAIM_WORKFLOW, CLAIMS, STAFF_PHONE_NO,
@@ -16,9 +15,7 @@ DROP TABLE IF EXISTS
     USAGE_TYPE, ADDRESS_TYPE, PAYMENT_METHODS, SPECIALIZATIONS
 CASCADE;
 
--- =============================================================================
---  SECTION A: LOOKUP / REFERENCE TABLES (7)
--- =============================================================================
+-- Lookup / Reference Tables
 
 CREATE TABLE SPECIALIZATIONS (
     Specialization_Id   SERIAL          PRIMARY KEY,
@@ -56,9 +53,7 @@ CREATE TABLE UMBRELLA_ASSET_TYPE (
     Type_Name               VARCHAR(50) NOT NULL UNIQUE
 );
 
--- =============================================================================
---  SECTION B: PLATFORM ADMINISTRATION — SaaS LAYER (4)
--- =============================================================================
+-- Platform Administration
 
 CREATE TABLE COMPANY (
     Company_Id          SERIAL          PRIMARY KEY,
@@ -103,9 +98,7 @@ CREATE TABLE SUBSCRIPTION_INVOICES (
     Status              VARCHAR(20)     NOT NULL CHECK (Status IN ('Unpaid', 'Paid', 'Overdue', 'Cancelled'))
 );
 
--- =============================================================================
---  SECTION C: COMPANY BRANCH STRUCTURE (4)
--- =============================================================================
+-- Company Branch Structure
 
 CREATE TABLE BRANCH (
     Branch_Id           SERIAL          PRIMARY KEY,
@@ -143,9 +136,7 @@ CREATE TABLE BRANCH_INSURANCE_TYPE (
     PRIMARY KEY (Branch_Id, Insurance_Type_Id)
 );
 
--- =============================================================================
---  SECTION D: CUSTOMER (3)
--- =============================================================================
+-- Customer
 
 CREATE TABLE CUSTOMER (
     Customer_Id         SERIAL          PRIMARY KEY,
@@ -177,14 +168,12 @@ CREATE TABLE ADDRESS (
     Kebele              VARCHAR(100)
 );
 
--- =============================================================================
---  SECTION E: AGENT MANAGEMENT (1)
--- =============================================================================
+-- Agent Management
 
 CREATE TABLE AGENT (
     Agent_Id            SERIAL          PRIMARY KEY,
     Branch_Id           INTEGER         NOT NULL REFERENCES BRANCH(Branch_Id),
-    -- [Company_Id removed in v3 normalization]
+    -- Company_Id resolved via FK chain
     First_Name          VARCHAR(100)    NOT NULL,
     Last_Name           VARCHAR(100)    NOT NULL,
     License_No          VARCHAR(50)     NOT NULL UNIQUE,
@@ -194,9 +183,7 @@ CREATE TABLE AGENT (
     Hired_Date          DATE
 );
 
--- =============================================================================
---  SECTION I (partial): CLAIM_STAFF
--- =============================================================================
+-- Claim Staff
 
 CREATE TABLE CLAIM_STAFF (
     Claim_Staff_Id      SERIAL          PRIMARY KEY,
@@ -221,13 +208,11 @@ CREATE TABLE STAFF_PHONE_NO (
     PRIMARY KEY (Claim_Staff_Id, Phone_No_Id)
 );
 
--- =============================================================================
---  SECTION F: QUOTES AND UNDERWRITING (2)
--- =============================================================================
+-- Quotes and Underwriting
 
 CREATE TABLE QUOTES (
     Quote_Id            SERIAL          PRIMARY KEY,
-    -- [Company_Id removed in v3 normalization]
+    -- Company_Id resolved via FK chain
     Customer_Id         INTEGER         NOT NULL REFERENCES CUSTOMER(Customer_Id),
     Agent_Id            INTEGER         NOT NULL REFERENCES AGENT(Agent_Id),
     Branch_Id           INTEGER         NOT NULL REFERENCES BRANCH(Branch_Id),     
@@ -252,9 +237,7 @@ CREATE TABLE UNDERWRITING (
     Notes               TEXT
 );
 
--- =============================================================================
---  SECTION G: POLICIES (3)
--- =============================================================================
+-- Policies
 
 CREATE TABLE UMBRELLA_LINK (
     Umbrella_Link_Id        SERIAL      PRIMARY KEY,
@@ -287,9 +270,7 @@ CREATE TABLE POLICY_COVERAGE (
     Deductible          NUMERIC(14,2)   NOT NULL DEFAULT 0
 );
 
--- =============================================================================
---  SECTION H: ASSET / INSURANCE-SPECIFIC TABLES (5)
--- =============================================================================
+-- Asset / Insurance-Specific Tables
 
 CREATE TABLE AUTO_ASSET (
     Auto_Asset_Id       SERIAL          PRIMARY KEY,
@@ -338,13 +319,11 @@ CREATE TABLE BENEFICIARIES (
     Percentage          NUMERIC(5,2)    NOT NULL CHECK (Percentage > 0 AND Percentage <= 100)
 );
 
--- =============================================================================
---  SECTION I (continued): CLAIMS
--- =============================================================================
+-- Claims
 
 CREATE TABLE CLAIMS (
     Claim_Id            SERIAL          PRIMARY KEY,
-    -- [Company_Id removed in v3 normalization]
+    -- Company_Id resolved via FK chain
     Policy_Id           INTEGER         NOT NULL REFERENCES POLICIES(Policy_Id),
     Claim_Staff_Id      INTEGER         NOT NULL REFERENCES CLAIM_STAFF(Claim_Staff_Id),
     Incident_Date       DATE            NOT NULL,
@@ -369,13 +348,11 @@ CREATE TABLE CLAIM_WORKFLOW (
     UNIQUE (Claim_Id, Step_Number)
 );
 
--- =============================================================================
---  SECTION J: DOCUMENTS (1)
--- =============================================================================
+-- Documents
 
 CREATE TABLE DOCUMENTS (
     Document_Id         SERIAL          PRIMARY KEY,
-    -- [Company_Id removed in v3 normalization]
+    -- Company_Id resolved via FK chain
     Policy_Id           INTEGER         REFERENCES POLICIES(Policy_Id),    
     Claim_Id            INTEGER         REFERENCES CLAIMS(Claim_Id),        
     File_Name           VARCHAR(255)    NOT NULL,
@@ -388,9 +365,7 @@ CREATE TABLE DOCUMENTS (
     Description         TEXT
 );
 
--- =============================================================================
---  SECTION K: PAYMENTS (2)
--- =============================================================================
+-- Payments
 
 CREATE TABLE PAYMENTS (
     Payment_Id          SERIAL          PRIMARY KEY,
@@ -412,13 +387,11 @@ CREATE TABLE PAYMENT_SCHEDULES (
     PRIMARY KEY (Policy_Id, Installment_Number)
 );
 
--- =============================================================================
---  SECTION L: NOTIFICATIONS (1)
--- =============================================================================
+-- Notifications
 
 CREATE TABLE NOTIFICATIONS (
     Notification_Id     SERIAL          PRIMARY KEY,
-    -- [Company_Id removed in v3 normalization]
+    -- Company_Id resolved via FK chain
     Customer_Id         INTEGER         NOT NULL REFERENCES CUSTOMER(Customer_Id),
     Policy_Id           INTEGER         REFERENCES POLICIES(Policy_Id),    
     Claim_Id            INTEGER         REFERENCES CLAIMS(Claim_Id),        
@@ -435,11 +408,37 @@ CREATE TABLE NOTIFICATIONS (
                                         CHECK (Status IN ('Sent', 'Delivered', 'Failed', 'Read'))
 );
 
--- =============================================================================
---  AGENT_COMMISSIONS — placed last as it references both AGENT and POLICIES
--- =============================================================================
+-- Users
 
-CREATE TABLE AGENT_COMMISSIONS (
+CREATE TABLE USERS (
+    User_Id       SERIAL PRIMARY KEY,
+    Email         VARCHAR(150) NOT NULL UNIQUE,
+    Password_Hash VARCHAR(255) NOT NULL,
+    Role          VARCHAR(20) NOT NULL CHECK (Role IN ('super_admin','admin','agent','claim_staff')),
+    Company_Id    INTEGER REFERENCES COMPANY(Company_Id),
+    First_Name    VARCHAR(100) NOT NULL,
+    Last_Name     VARCHAR(100) NOT NULL,
+    Status        VARCHAR(20) NOT NULL DEFAULT 'Active',
+    Created_At    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit Log (regulatory requirement)
+CREATE TABLE AUDIT_LOG (
+    Audit_Id            SERIAL          PRIMARY KEY,
+    User_Id             INTEGER         NOT NULL REFERENCES USERS(User_Id),
+    Action              VARCHAR(50)     NOT NULL,
+    Entity_Type         VARCHAR(50)     NOT NULL,
+    Entity_Id           INTEGER,
+    Details             JSONB,
+    Ip_Address          VARCHAR(45),
+    Created_At          TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_log_user     ON AUDIT_LOG(User_Id);
+CREATE INDEX idx_audit_log_entity   ON AUDIT_LOG(Entity_Type, Entity_Id);
+CREATE INDEX idx_audit_log_created  ON AUDIT_LOG(Created_At);
+
+-- Agent Commissions
     Commission_Id       SERIAL          PRIMARY KEY,
     Agent_Id            INTEGER         NOT NULL REFERENCES AGENT(Agent_Id),
     Policy_Id           INTEGER         NOT NULL REFERENCES POLICIES(Policy_Id),
@@ -449,9 +448,7 @@ CREATE TABLE AGENT_COMMISSIONS (
                                         CHECK (Status IN ('Pending', 'Paid', 'Cancelled'))
 );
 
--- =============================================================================
---  INDEXES 
--- =============================================================================
+-- Indexes
 
 CREATE INDEX idx_customer_company       ON CUSTOMER(Company_Id);
 CREATE INDEX idx_branch_company         ON BRANCH(Company_Id);
@@ -465,11 +462,9 @@ CREATE INDEX idx_claims_policy          ON CLAIMS(Policy_Id);
 CREATE INDEX idx_payments_policy        ON PAYMENTS(Policy_Id);
 CREATE INDEX idx_notifications_customer ON NOTIFICATIONS(Customer_Id);
 
--- =============================================================================
---  VERIFICATION QUERIES (Diagnostics)
--- =============================================================================
+-- Verification Queries
 
--- Full policy chain: customer → quote → policy → asset → claim
+-- Full policy chain: customer to claim
 SELECT
     c.first_name || ' ' || c.last_name   AS customer,
     q.premium_amount                      AS quoted_premium,
@@ -485,7 +480,7 @@ JOIN underwriting u ON u.quote_id   = q.quote_id
 JOIN auto_asset a  ON a.policy_id   = p.policy_id
 JOIN claims    cl  ON cl.policy_id  = p.policy_id;
 
--- Company derivation for CLAIMS (no Company_Id stored — resolved via FK chain)
+-- Company derivation for CLAIMS (via FK chain)
 SELECT cl.claim_id, p.policy_no, co.company_name
 FROM claims cl
 JOIN policies p ON p.policy_id = cl.policy_id

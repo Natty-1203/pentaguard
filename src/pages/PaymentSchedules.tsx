@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/src/components/ui/card';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Badge } from '@/src/components/ui/badge';
@@ -12,6 +13,7 @@ import {
 import { StatusBadge } from '@/src/components/ui/status-badge';
 
 export default function PaymentSchedulesPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,9 +23,9 @@ export default function PaymentSchedulesPage() {
   const fetchSchedules = async () => {
     try {
       const [schRes, polRes, cusRes] = await Promise.all([
-        fetch('/api/payment-schedules'),
-        fetch('/api/policies'),
-        fetch('/api/customers')
+        fetch(`/api/payment-schedules?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`),
+        fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`)
       ]);
       if (schRes.ok && polRes.ok && cusRes.ok) {
         const rawData = await schRes.json();

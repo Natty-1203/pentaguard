@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -11,13 +12,14 @@ import {
 import { StatusBadge } from '@/src/components/ui/status-badge';
 
 export default function NotificationsPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch(`/api/notifications?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const rawData = await res.json();
         const mapped = rawData.map((dbRow: any, idx: number) => {
@@ -48,12 +50,8 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetchNotifications();
   }, []);
-
-  // Modals state
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
-
-  // Broadcast Form states
   const [targetAudience, setTargetAudience] = useState('All Stakeholders');
   const [customerIdInput, setCustomerIdInput] = useState('');
   const [channel, setChannel] = useState('Email');
@@ -88,7 +86,7 @@ export default function NotificationsPage() {
     if (!broadcastBody.trim()) return;
 
     try {
-      const res = await fetch('/api/notifications', {
+      const res = await fetch(`/api/notifications?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,7 +281,7 @@ export default function NotificationsPage() {
                     <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Customer ID</label>
                     <Input 
                       type="number"
-                      placeholder="e.g. 1" 
+                      placeholder="ID" 
                       value={customerIdInput} 
                       onChange={e => setCustomerIdInput(e.target.value)}
                       className="h-10 text-xs font-semibold"
@@ -295,7 +293,7 @@ export default function NotificationsPage() {
                     <label className="block text-gray-500 font-bold uppercase tracking-wider text-[9px]">Communication Segment tag</label>
                     <Input 
                       type="text" 
-                      placeholder="e.g. SYSTEM_MAINTENANCE" 
+                      placeholder="Notification type" 
                       value={customTag} 
                       onChange={e => setCustomTag(e.target.value)}
                       className="h-10 text-xs font-semibold"
@@ -434,7 +432,7 @@ export default function NotificationsPage() {
                   className="bg-blue-600 text-white font-bold" 
                   size="sm" 
                   onClick={() => {
-                    alert(`Syncing diagnostic telemetry with SMTP/Carrier protocol logs for ID: ${selectedNotif.id}... Successful!`);
+                    console.info(`Syncing diagnostic telemetry with SMTP/Carrier protocol logs for ID: ${selectedNotif.id}... Successful!`);
                   }}
                 >
                   Inspect Mailer Logs

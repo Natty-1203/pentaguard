@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
@@ -12,11 +13,10 @@ import {
 import { StatusBadge } from '@/src/components/ui/status-badge';
 
 export default function PolicyDetailPage() {
+  const { selectedCompanyId } = useTenant();
   const { id } = useParams();
   const policyId = id || "POL-0001";
   const [activeTab, setActiveTab] = useState('Payment Schedule');
-
-  // Interactive lists states
   const [policy, setPolicy] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
@@ -28,14 +28,10 @@ export default function PolicyDetailPage() {
   const [assets, setAssets] = useState<any[]>([]);
   const [paymentScheduleState, setPaymentScheduleState] = useState<any[]>([]);
   const [paymentSummary, setPaymentSummary] = useState({ nextDue: '—', dueAmount: 'ETB 0', paidToDate: 'ETB 0', outstanding: 'ETB 0', method: '—', progress: 0 });
-
-  // Modals state
   const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<any>(null);
   const [viewingReceipt, setViewingReceipt] = useState<any>(null);
-
-  // Form states
   const [newClaim, setNewClaim] = useState({ incidentDate: '', amount: '', description: '' });
   const [newDoc, setNewDoc] = useState({ name: '', category: 'Policy' });
 
@@ -46,41 +42,33 @@ export default function PolicyDetailPage() {
       setLoading(true);
       const parsedId = Number(policyId.replace('POL-', ''));
       
-      const polRes = await fetch('/api/policies');
+      const polRes = await fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`);
       if (polRes.ok) {
         const policies = await polRes.json();
         const foundPol = policies.find((p: any) => p.Policy_Id === parsedId || `POL-${p.Policy_Id.toString().padStart(4, '0')}` === policyId);
         if (foundPol) {
           setPolicy(foundPol);
-          
-          // Load customer
-          const custRes = await fetch('/api/customers');
+          const custRes = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
           if (custRes.ok) {
             const cus = await custRes.json();
             const foundCust = cus.find((c: any) => c.Customer_Id === foundPol.Customer_Id);
             if (foundCust) setCustomer(foundCust);
           }
-          
-          // Load agent
-          const agentRes = await fetch('/api/agents');
+          const agentRes = await fetch(`/api/agents?companyId=${selectedCompanyId ?? 1}`);
           if (agentRes.ok) {
             const ags = await agentRes.json();
             const foundAg = ags.find((a: any) => a.Agent_Id === foundPol.Agent_Id);
             if (foundAg) setAgent(foundAg);
           }
-
-          // Load branch
           if (foundPol.Branch_Id) {
-            const branchRes = await fetch('/api/branches');
+            const branchRes = await fetch(`/api/branches?companyId=${selectedCompanyId ?? 1}`);
             if (branchRes.ok) {
               const bchs = await branchRes.json();
               const foundBch = bchs.find((b: any) => b.Branch_Id === foundPol.Branch_Id);
               if (foundBch) setBranch(foundBch);
             }
           }
-          
-          // Load payment schedule for this policy
-          const schedRes = await fetch('/api/payment-schedules');
+          const schedRes = await fetch(`/api/payment-schedules?companyId=${selectedCompanyId ?? 1}`);
           let paidToDate = 0;
           let nextDueDate = '—';
           let nextDueAmt = 0;
@@ -107,10 +95,8 @@ export default function PolicyDetailPage() {
               }
             }
           }
-
-          // Load payments for method
           let paymentMethod = '—';
-          const payRes = await fetch('/api/payments');
+          const payRes = await fetch(`/api/payments?companyId=${selectedCompanyId ?? 1}`);
           if (payRes.ok) {
             const pays = await payRes.json();
             const matchPays = pays.filter((p: any) => p.Policy_Id === foundPol.Policy_Id);
@@ -130,9 +116,7 @@ export default function PolicyDetailPage() {
             method: paymentMethod,
             progress
           });
-
-          // Load documents
-          const docRes = await fetch('/api/documents');
+          const docRes = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`);
           if (docRes.ok) {
             const docList = await docRes.json();
             const matchDocs = docList.filter((d: any) => d.Policy_Id === foundPol.Policy_Id);
@@ -149,9 +133,7 @@ export default function PolicyDetailPage() {
               setDocs(mappedDocs);
             }
           }
-
-          // Load claims
-          const claimRes = await fetch('/api/claims');
+          const claimRes = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`);
           if (claimRes.ok) {
             const claimsList = await claimRes.json();
             const matchClaims = claimsList.filter((c: any) => c.Policy_Id === foundPol.Policy_Id);
@@ -169,10 +151,8 @@ export default function PolicyDetailPage() {
               setClaims([]);
             }
           }
-
-          // Load assets
-          const autoRes = await fetch('/api/auto-assets');
-          const homeRes = await fetch('/api/home-assets');
+          const autoRes = await fetch(`/api/auto-assets?companyId=${selectedCompanyId ?? 1}`);
+          const homeRes = await fetch(`/api/home-assets?companyId=${selectedCompanyId ?? 1}`);
           let foundAssets: any[] = [];
           if (autoRes.ok) {
             const autos = await autoRes.json();
@@ -225,7 +205,7 @@ export default function PolicyDetailPage() {
   const handleCancelPolicy = async () => {
     if (!policy) return;
     try {
-      const res = await fetch(`/api/policies/${policy.Policy_Id}`, {
+      const res = await fetch(`/api/policies/${policy.Policy_Id}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ Status: 'Cancelled' })
@@ -241,7 +221,7 @@ export default function PolicyDetailPage() {
   const handleRenewPolicy = async () => {
     if (!policy) return;
     try {
-      const res = await fetch(`/api/policies/${policy.Policy_Id}`, {
+      const res = await fetch(`/api/policies/${policy.Policy_Id}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ Status: 'Active' })
@@ -253,13 +233,11 @@ export default function PolicyDetailPage() {
       console.error(err);
     }
   };
-
-  // Handlers
   const handleAddClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClaim.incidentDate || !newClaim.amount || !policy) return;
     try {
-      const res = await fetch('/api/claims', {
+      const res =       await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,7 +261,7 @@ export default function PolicyDetailPage() {
     e.preventDefault();
     if (!newDoc.name || !policy) return;
     try {
-      const res = await fetch('/api/documents', {
+      const res = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -316,7 +294,7 @@ export default function PolicyDetailPage() {
   if (loading) {
     return (
       <div className="p-8 text-center text-sm font-medium text-gray-500">
-        Loading policy details from database...
+        Loading policy details...
       </div>
     );
   }
@@ -324,7 +302,7 @@ export default function PolicyDetailPage() {
   if (!policy) {
     return (
       <div className="p-8 text-center text-sm font-medium text-red-500">
-        Policy details not found in database.
+        Policy not found
       </div>
     );
   }
@@ -649,7 +627,7 @@ export default function PolicyDetailPage() {
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button 
-                          onClick={() => { alert(`Downloading file "${doc.name}" directly to downloads folder...`); }}
+                          onClick={() => { console.info(`Downloading file "${doc.name}" directly to downloads folder...`); }}
                           className="h-7 w-7 text-gray-400 hover:text-blue-600 hover:bg-blue-50/50 rounded flex items-center justify-center transition-colors"
                           title="Download document payload"
                         >
@@ -768,7 +746,7 @@ export default function PolicyDetailPage() {
                   <input 
                     type="number" 
                     required
-                    placeholder="e.g. 55000"
+                    placeholder="Amount"
                     value={newClaim.amount} 
                     onChange={(e) => setNewClaim({...newClaim, amount: e.target.value})} 
                     className="w-full bg-gray-50 ring-0 hover:border-gray-300 focus:border-blue-500 focus:bg-white border border-gray-200 h-10 px-3 rounded-lg text-xs font-medium text-gray-900 transition-colors placeholder:text-gray-400"
@@ -817,7 +795,7 @@ export default function PolicyDetailPage() {
                   <input 
                     type="text" 
                     required
-                    placeholder="e.g. Vehicle_Inspection_May2024"
+                    placeholder="Document name"
                     value={newDoc.name} 
                     onChange={(e) => setNewDoc({...newDoc, name: e.target.value})} 
                     className="w-full bg-gray-50 ring-0 hover:border-gray-300 focus:border-blue-500 focus:bg-white border border-gray-200 h-10 px-3 rounded-lg text-xs font-semibold text-gray-900 transition-colors placeholder:text-gray-400"
@@ -894,7 +872,7 @@ export default function PolicyDetailPage() {
 
               <div className="pt-2 flex justify-end gap-2 text-xs">
                 <Button size="sm" variant="outline" className="text-gray-705" onClick={() => setViewingDoc(null)}>Close Preview</Button>
-                <Button size="sm" className="bg-blue-650 text-white hover:bg-blue-700 font-semibold flex items-center gap-1.5" onClick={() => { alert(`Downloading file "${viewingDoc.name}" directly to downloads folder...`); }}>
+                <Button size="sm" className="bg-blue-650 text-white hover:bg-blue-700 font-semibold flex items-center gap-1.5" onClick={() => { console.info(`Downloading file "${viewingDoc.name}" directly to downloads folder...`); }}>
                   <Download className="w-3.5 h-3.5" /> Download file ({viewingDoc.size})
                 </Button>
               </div>
@@ -949,7 +927,7 @@ export default function PolicyDetailPage() {
 
               <div className="pt-4 border-t flex justify-end gap-2">
                 <Button size="sm" variant="outline" className="text-gray-700 font-semibold" onClick={() => setViewingReceipt(null)}>Dismiss Receipt</Button>
-                <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 font-bold flex items-center gap-1.5" onClick={() => { alert(`Downloading Transaction receipt "INST-PS-${viewingReceipt.n}_receipt.pdf" directly...`); }}>
+                <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 font-bold flex items-center gap-1.5" onClick={() => { console.info(`Downloading Transaction receipt "INST-PS-${viewingReceipt.n}_receipt.pdf" directly...`); }}>
                   <Download className="w-3.5 h-3.5" /> Download PDF Receipt
                 </Button>
               </div>

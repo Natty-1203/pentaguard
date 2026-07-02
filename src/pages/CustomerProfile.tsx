@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Mail, Phone, MapPin, Building, Edit2, ShieldCheck, AlertCircle, FileText, Download, X, CreditCard, Clock, Eye, MessageSquare, Calendar } from 'lucide-react';
 
 export default function CustomerProfilePage() {
+  const { selectedCompanyId } = useTenant();
   const { id } = useParams();
   const customerId = id || '';
   const rawId = id ? parseInt(id, 10) : NaN;
@@ -38,7 +40,7 @@ export default function CustomerProfilePage() {
   const fetchCustomerInfo = async () => {
     if (!rawId || Number.isNaN(rawId)) { setLoading(false); return; }
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const data = await res.json();
         const current = data.find((c: any) => c.Customer_Id === rawId);
@@ -57,18 +59,14 @@ export default function CustomerProfilePage() {
           if (current.Registration_Date) {
             setRegistrationDate(new Date(current.Registration_Date).toLocaleString('en-US', { month: 'long', year: 'numeric' }));
           }
-
-          // Fetch customer policies
           let myPolicies: any[] = [];
-          const polRes = await fetch('/api/policies');
+          const polRes = await fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`);
           if (polRes.ok) {
             const policies = await polRes.json();
             myPolicies = policies.filter((p: any) => p.Customer_Id === rawId);
             setCustomerPolicies(myPolicies);
           }
-
-          // Fetch payments to compute total premium paid
-          const payRes = await fetch('/api/payments');
+          const payRes = await fetch(`/api/payments?companyId=${selectedCompanyId ?? 1}`);
           if (payRes.ok) {
             const payments = await payRes.json();
             const myPolicyIds = myPolicies.map((p: any) => p.Policy_Id);
@@ -78,9 +76,7 @@ export default function CustomerProfilePage() {
               .reduce((sum: number, p: any) => sum + Number(p.Amount || 0), 0);
             setTotalPremiumPaid(totalPaid);
           }
-
-          // Fetch recent activity (claims)
-          const actRes = await fetch('/api/claims');
+          const actRes = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`);
           if (actRes.ok) {
             const claims = await actRes.json();
             const myPolicyIds = myPolicies.map((p: any) => p.Policy_Id);
@@ -94,17 +90,13 @@ export default function CustomerProfilePage() {
             }));
             setRecentActivity(claimActivity);
           }
-
-          // Fetch documents
-          const docRes = await fetch('/api/documents');
+          const docRes = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`);
           if (docRes.ok) {
             const docs = await docRes.json();
             const myPolicyIds = myPolicies.map((p: any) => p.Policy_Id);
             setCustomerDocs(docs.filter((d: any) => myPolicyIds.includes(d.Policy_Id)));
           }
-
-          // Fetch communication log (notifications)
-          const notifRes = await fetch('/api/notifications');
+          const notifRes = await fetch(`/api/notifications?companyId=${selectedCompanyId ?? 1}`);
           if (notifRes.ok) {
             const notifs = await notifRes.json();
             setCommunicationLog(notifs.filter((n: any) => n.Customer_Id === rawId));
@@ -126,7 +118,7 @@ export default function CustomerProfilePage() {
     const last = parts.slice(1).join(' ') || '';
 
     try {
-      const res = await fetch(`/api/customers/${rawId}`, {
+      const res = await fetch(`/api/customers/${rawId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

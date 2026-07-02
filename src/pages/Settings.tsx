@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  // Company Profile states — start empty, populate from /api/company
+  const { selectedCompanyId } = useTenant();
   const [companyName, setCompanyName] = useState('');
   const [companyId, setCompanyId] = useState<number>(1);
   const [taxId, setTaxId] = useState('');
@@ -29,36 +30,27 @@ export default function SettingsPage() {
   const [headOffice, setHeadOffice] = useState('');
   const [website, setWebsite] = useState('');
   const [currency, setCurrency] = useState('ETB');
-
-  // Commission tiers are derived from AGENT data (real distribution of Commission_Rate)
   const [commissionTiers, setCommissionTiers] = useState<{ platinum: string; gold: string; silver: string; bronze: string }>({
     platinum: '15.0', gold: '12.0', silver: '10.0', bronze: '7.0'
   });
 
-  // System Preference states (kept in component state — no backend table to persist these)
   const [requireBranchApproval, setRequireBranchApproval] = useState(true);
   const [notifyOnNewClaims, setNotifyOnNewClaims] = useState(true);
   const [notifyOnPaymentDue, setNotifyOnPaymentDue] = useState(false);
   const [allowAgentSelfOnboarding, setAllowAgentSelfOnboarding] = useState(false);
-
-  // Active Tab layout visual settings
   const [activeTab, setActiveTab] = useState<'profile' | 'commissions' | 'security' | 'subscription'>('profile');
-
-  // Loading/Saving states
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [subscriptionPlan, setSubscriptionPlan] = useState('Professional');
   const [subscriptionStatus, setSubscriptionStatus] = useState('Active - Good Standing');
   const [subscriptionFee, setSubscriptionFee] = useState(7999);
-
-  // Fetch company profile from backend on mount
   useEffect(() => {
     const fetchCompany = async () => {
       try {
         const [comRes, plansRes] = await Promise.all([
-          fetch('/api/company'),
-          fetch('/api/subscription-plans')
+          fetch(`/api/company?companyId=${selectedCompanyId ?? 1}`),
+          fetch(`/api/subscription-plans?companyId=${selectedCompanyId ?? 1}`)
         ]);
         if (!comRes.ok) throw new Error('Failed to load company');
         const data = await comRes.json();
@@ -82,12 +74,10 @@ export default function SettingsPage() {
     };
     fetchCompany();
   }, []);
-
-  // Derive commission tier thresholds from real agent commission distribution
   useEffect(() => {
     const fetchTiers = async () => {
       try {
-        const res = await fetch('/api/agent-performance');
+        const res = await fetch(`/api/agent-performance?companyId=${selectedCompanyId ?? 1}`);
         if (!res.ok) return;
         const data = await res.json();
         if (data.length === 0) return;

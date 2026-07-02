@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
@@ -20,11 +21,12 @@ export default function ClaimDetailPage() {
   const [claimStaff, setClaimStaff] = React.useState<any[]>([]);
   const [documents, setDocuments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { selectedCompanyId } = useTenant();
 
   const fetchClaimData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/claims');
+      const res = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const rawClaims = await res.json();
         const parsedId = Number(claimId.replace('CLM-', ''));
@@ -35,17 +37,13 @@ export default function ClaimDetailPage() {
 
         if (found) {
           setClaim(found);
-
-          // fetch connected policy
-          const polRes = await fetch('/api/policies');
+          const polRes = await fetch(`/api/policies?companyId=${selectedCompanyId ?? 1}`);
           if (polRes.ok) {
             const policiesList = await polRes.json();
             const foundPol = policiesList.find((p: any) => p.Policy_Id === found.Policy_Id);
             if (foundPol) {
               setPolicy(foundPol);
-
-              // fetch connected customer
-              const custRes = await fetch('/api/customers');
+              const custRes = await fetch(`/api/customers?companyId=${selectedCompanyId ?? 1}`);
               if (custRes.ok) {
                 const customersList = await custRes.json();
                 const foundCust = customersList.find((cu: any) => cu.Customer_Id === foundPol.Customer_Id);
@@ -55,20 +53,14 @@ export default function ClaimDetailPage() {
               }
             }
           }
-
-          // fetch workflows
-          const wfRes = await fetch(`/api/claims/${found.Claim_Id}/workflow`);
+          const wfRes = await fetch(`/api/claims/${found.Claim_Id}/workflow?companyId=${selectedCompanyId ?? 1}`);
           if (wfRes.ok) {
             const wfData = await wfRes.json();
             setWorkflows(wfData);
           }
-
-          // fetch claim staff directory
-          const csRes = await fetch('/api/claim-staff');
+          const csRes = await fetch(`/api/claim-staff?companyId=${selectedCompanyId ?? 1}`);
           if (csRes.ok) setClaimStaff(await csRes.json());
-
-          // fetch documents for this claim
-          const docRes = await fetch('/api/documents');
+          const docRes = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`);
           if (docRes.ok) {
             const allDocs = await docRes.json();
             setDocuments(allDocs.filter((d: any) => d.Claim_Id === found.Claim_Id));
@@ -90,7 +82,7 @@ export default function ClaimDetailPage() {
     if (!claim) return;
     try {
       const fetchId = claim.Claim_Id || claim.claim_id;
-      const res = await fetch(`/api/claims/${fetchId}`, {
+      const res = await fetch(`/api/claims/${fetchId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ Status: newStatus })
@@ -106,7 +98,7 @@ export default function ClaimDetailPage() {
   if (loading) {
     return (
       <div className="p-8 text-center text-sm font-medium text-gray-500">
-        Loading claim details from database...
+        Loading claim details...
       </div>
     );
   }
@@ -114,7 +106,7 @@ export default function ClaimDetailPage() {
   if (!claim) {
     return (
       <div className="p-8 text-center text-sm font-medium text-red-500">
-        Claim details not found in database.
+        Claim not found
       </div>
     );
   }

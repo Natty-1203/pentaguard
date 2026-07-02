@@ -257,4 +257,12 @@ INSERT INTO NOTIFICATIONS (Notification_Id, Customer_Id, Policy_Id, Claim_Id, Ch
 (1, 1, 1, NULL, 'SMS', 'Welcome', 'Dear Almaz, Nile Insurance S.C welcomes you! Your Motor Comprehensive POL-MTR-994101 is now active.', '2026-05-05 10:00:00', 'Delivered')
 ON CONFLICT (Notification_Id) DO NOTHING;
 
+-- 36. USERS (Demo Accounts)
+INSERT INTO USERS (User_Id, Email, Password_Hash, Role, Company_Id, First_Name, Last_Name, Status) VALUES
+(1, 'admin@nile.com', '$2b$10$dXxG3eN7UoUComxaVF2pZOmyizYZvLyql.1ozVeRywfC1yWmzOvMq', 'admin', 1, 'Yonas', 'Girma', 'Active'),
+(2, 'agent@nile.com', '$2b$10$U.bHa4lriTSYqESJGqlGu.E9nMirrssooWtEs3ThZxixWIegnSIQq', 'agent', 1, 'Abebe', 'Kebede', 'Active'),
+(3, 'claims@nile.com', '$2b$10$JpiZ15MXqx4sJ0fCJs324u6phRGrasAfSIZsdkI2I9irYg1xtoWuS', 'claim_staff', 1, 'Tewodros', 'Hailu', 'Active'),
+(4, 'super@pentaguard.com', '$2b$10$/pSBEZ.IxbwN9XK2OEGrUeta0rAYpOjhFlpHpGItFYiF0XP2MZKkK', 'super_admin', NULL, 'Super', 'Admin', 'Active')
+ON CONFLICT (User_Id) DO NOTHING;
+
 COMMIT;

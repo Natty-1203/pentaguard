@@ -2,11 +2,9 @@ import { simDb, persistDb } from './sim_db_engine';
 import { dbState } from './db_state';
 import { executeQuery } from './db';
 
-// REST helper functions to perform transactional operations directly on database
 export const dbService = {
   isPostgres: () => dbState.isRealPostgres,
   
-  // Customers List and creation
   getCustomers: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery('SELECT * FROM CUSTOMER');
@@ -85,7 +83,6 @@ export const dbService = {
 
   deleteCustomer: async (id: number) => {
     if (dbState.isRealPostgres) {
-      // Pre-check for dependent quotes to provide a clean error instead of a PostgreSQL crash log
       const checkQuotes = await executeQuery('SELECT Quote_Id FROM QUOTES WHERE Customer_Id = $1 LIMIT 1', [id]);
       if (checkQuotes.rows.length > 0) {
         throw new Error(`Cannot delete Customer #${id} because they have associated Quotes or Policies.`);
@@ -102,7 +99,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Branches list & creation
+
   getBranches: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery('SELECT * FROM BRANCH');
@@ -173,7 +170,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Company
+
   addCompany: async (comp: any) => {
     if (dbState.isRealPostgres) {
       const newIdRes = await executeQuery('SELECT COALESCE(MAX(Company_Id), 0) + 1 AS new_id FROM COMPANY');
@@ -228,7 +225,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Agents
+
   getAgents: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery(`
@@ -307,7 +304,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Quotes
+
   getQuotes: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery(`
@@ -385,7 +382,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Policies
+
   getPolicies: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery(`
@@ -419,7 +416,7 @@ export const dbService = {
       const endDate = pol.End_Date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const premium = parseFloat(pol.Total_Premium || '15500');
 
-      // Quote_Id is NOT NULL in schema, so auto-create a quote if none provided
+      // Create a quote if none provided (Quote_Id is NOT NULL)
       let quoteId = pol.Quote_Id ? parseInt(pol.Quote_Id) : null;
       if (!quoteId) {
         const quoteIdRes = await executeQuery('SELECT COALESCE(MAX(Quote_Id), 0) + 1 AS new_id FROM QUOTES');
@@ -436,7 +433,6 @@ export const dbService = {
         [newId, 1, parseInt(pol.Customer_Id || '1'), parseInt(pol.Branch_Id || '1'), quoteId, parseInt(pol.Insurance_Type_Id || '1'), policyNo, startDate, endDate, pol.Status || 'Active', premium]
       );
 
-      // Auto-generate some scheduled installments
       await executeQuery(
         'INSERT INTO PAYMENT_SCHEDULES (Policy_Id, Installment_Number, Due_Date, Amount, Status) VALUES ($1, 1, $2, $3, \'Paid\')',
         [newId, startDate, premium / 2]
@@ -466,7 +462,6 @@ export const dbService = {
     };
     simDb.policies.unshift(item);
     
-    // Auto-generate some scheduled installments
     const schedule1 = {
       Policy_Id: newId,
       Installment_Number: 1,
@@ -516,7 +511,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Claims
+
   getClaims: async () => {
     if (dbState.isRealPostgres) {
       const data = await executeQuery(`
@@ -545,7 +540,6 @@ export const dbService = {
     if (dbState.isRealPostgres) {
       const polId = parseInt(cl.Policy_Id || '1');
       
-      // Verify policy exists before inserting to prevent foreign key constraint logs
       const checkPol = await executeQuery('SELECT Policy_Id FROM POLICIES WHERE Policy_Id = $1', [polId]);
       if (checkPol.rows.length === 0) {
         throw new Error(`Policy ID ${polId} does not exist. Cannot file a claim.`);
@@ -559,7 +553,6 @@ export const dbService = {
         [newId, polId, cl.Claim_Staff_Id ? parseInt(cl.Claim_Staff_Id) : 1, incDate, incDate, cl.Status || 'Filed', cl.Description || '']
       );
 
-      // Initial workflow step — let Step_Id and Step_Date use SERIAL/DEFAULT
       await executeQuery(
         'INSERT INTO CLAIM_WORKFLOW (Claim_Id, Step_Number, Step_Name, Assigned_To, Action_Taken, Notes) VALUES ($1, 1, \'Filed\', $2, \'Claim logged in core portal\', \'Seed\')',
         [newId, cl.Claim_Staff_Id ? parseInt(cl.Claim_Staff_Id) : 1]
@@ -580,7 +573,6 @@ export const dbService = {
     };
     simDb.claims.unshift(item);
 
-    // Initial workflow step
     simDb.claim_workflows.push({
       Step_Id: simDb.claim_workflows.length + 1,
       Claim_Id: newId,
@@ -625,7 +617,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Subscription Plans
+
   addSubscriptionPlan: async (plan: any) => {
     if (dbState.isRealPostgres) {
       const newIdRes = await executeQuery('SELECT COALESCE(MAX(Plan_Id), 0) + 1 AS new_id FROM SUBSCRIPTION_PLANS');
@@ -679,7 +671,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Invoices
+
   addInvoice: async (inv: any) => {
     const companyId = parseInt(inv.Company_Id) || 1;
     const planId = parseInt(inv.Plan_Id) || 1;
@@ -750,7 +742,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Notifications
+
   addNotification: async (notif: any) => {
     if (dbState.isRealPostgres) {
       const newIdRes = await executeQuery('SELECT COALESCE(MAX(Notification_Id), 0) + 1 AS new_id FROM NOTIFICATIONS');
@@ -779,7 +771,7 @@ export const dbService = {
     return item;
   },
 
-  // Documents
+
   addDocument: async (doc: any) => {
     if (dbState.isRealPostgres) {
       const newIdRes = await executeQuery('SELECT COALESCE(MAX(Document_Id), 0) + 1 AS new_id FROM DOCUMENTS');
@@ -815,7 +807,7 @@ export const dbService = {
     persistDb();
   },
 
-  // Payments
+
   addPayment: async (pay: any) => {
     if (dbState.isRealPostgres) {
       const newIdRes = await executeQuery('SELECT COALESCE(MAX(Payment_Id), 0) + 1 AS new_id FROM PAYMENTS');
@@ -904,7 +896,6 @@ export const dbService = {
         RETURNING *
       `, [claimId, nextStep, Step_Name, Assigned_To || 1, Action_Taken || '', Notes || '']);
       
-      // Update claim status if it's a final step or milestone
       if (['Approved', 'Rejected', 'Paid', 'Under_Review'].includes(Step_Name)) {
         await executeQuery('UPDATE CLAIMS SET Status = $1 WHERE Claim_Id = $2', [Step_Name, claimId]);
       }
@@ -946,7 +937,7 @@ export const dbService = {
     });
   },
 
-  getMonthlyAnalytics: async () => {
+  getMonthlyAnalytics: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const trendQuery = await executeQuery(`
         SELECT 
@@ -962,9 +953,10 @@ export const dbService = {
           )::date as d
         ) dates
         LEFT JOIN PAYMENTS p ON DATE_TRUNC('month', p.Payment_Date) = DATE_TRUNC('month', d)
+        LEFT JOIN POLICIES pol ON p.Policy_Id = pol.Policy_Id AND pol.Company_Id = $1
         GROUP BY d
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       
       let data = trendQuery.rows.map(r => ({
         name: r.Name || r.name,
@@ -1044,12 +1036,10 @@ export const dbService = {
     return simDb.subscription_invoices;
   },
 
-  // ===================================================================
-  //  DERIVED / AGGREGATED READS — used by dashboard, topbar, analytics
-  // ===================================================================
+  // Derived / aggregated reads for dashboards and analytics
 
-  // 12-month sparkline series for each KPI tile
-  getDashboardSparkline: async () => {
+  // 12-month sparklines per KPI
+  getDashboardSparkline: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const customersRes = await executeQuery(`
         SELECT TO_CHAR(d, 'Mon') as label, COALESCE(c.cnt, 0)::int as value
@@ -1062,10 +1052,10 @@ export const dbService = {
         ) months
         LEFT JOIN (
           SELECT DATE_TRUNC('month', Registration_Date) as m, COUNT(*) as cnt
-          FROM CUSTOMER GROUP BY DATE_TRUNC('month', Registration_Date)
+          FROM CUSTOMER WHERE Company_Id = $1 GROUP BY DATE_TRUNC('month', Registration_Date)
         ) c ON c.m = DATE_TRUNC('month', d)
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       const policiesRes = await executeQuery(`
         SELECT TO_CHAR(d, 'Mon') as label, COALESCE(p.cnt, 0)::int as value
         FROM (
@@ -1077,10 +1067,10 @@ export const dbService = {
         ) months
         LEFT JOIN (
           SELECT DATE_TRUNC('month', Start_Date) as m, COUNT(*) as cnt
-          FROM POLICIES GROUP BY DATE_TRUNC('month', Start_Date)
+          FROM POLICIES WHERE Company_Id = $1 GROUP BY DATE_TRUNC('month', Start_Date)
         ) p ON p.m = DATE_TRUNC('month', d)
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       const claimsRes = await executeQuery(`
         SELECT TO_CHAR(d, 'Mon') as label, COALESCE(c.cnt, 0)::int as value
         FROM (
@@ -1091,13 +1081,16 @@ export const dbService = {
           )::date as d
         ) months
         LEFT JOIN (
-          SELECT DATE_TRUNC('month', Incident_Date) as m, COUNT(*) as cnt
-          FROM CLAIMS GROUP BY DATE_TRUNC('month', Incident_Date)
+          SELECT DATE_TRUNC('month', cl.Incident_Date) as m, COUNT(*) as cnt
+          FROM CLAIMS cl
+          JOIN POLICIES p ON cl.Policy_Id = p.Policy_Id
+          WHERE p.Company_Id = $1
+          GROUP BY DATE_TRUNC('month', cl.Incident_Date)
         ) c ON c.m = DATE_TRUNC('month', d)
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       const revenueRes = await executeQuery(`
-        SELECT TO_CHAR(d, 'Mon') as label, COALESCE(SUM(p.Amount), 0)::float as value
+        SELECT TO_CHAR(d, 'Mon') as label, COALESCE(SUM(pay.Amount), 0)::float as value
         FROM (
           SELECT generate_series(
             DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months',
@@ -1105,10 +1098,11 @@ export const dbService = {
             '1 month'::interval
           )::date as d
         ) months
-        LEFT JOIN PAYMENTS p ON DATE_TRUNC('month', p.Payment_Date) = DATE_TRUNC('month', d)
+        LEFT JOIN PAYMENTS pay ON DATE_TRUNC('month', pay.Payment_Date) = DATE_TRUNC('month', d)
+        LEFT JOIN POLICIES pol ON pay.Policy_Id = pol.Policy_Id AND pol.Company_Id = $1
         GROUP BY d
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       const paymentsRes = await executeQuery(`
         SELECT TO_CHAR(d, 'Mon') as label, COALESCE(p.cnt, 0)::int as value
         FROM (
@@ -1119,11 +1113,14 @@ export const dbService = {
           )::date as d
         ) months
         LEFT JOIN (
-          SELECT DATE_TRUNC('month', Payment_Date) as m, COUNT(*) as cnt
-          FROM PAYMENTS WHERE Status = 'Pending' GROUP BY DATE_TRUNC('month', Payment_Date)
+          SELECT DATE_TRUNC('month', pay.Payment_Date) as m, COUNT(*) as cnt
+          FROM PAYMENTS pay
+          JOIN POLICIES pol ON pay.Policy_Id = pol.Policy_Id
+          WHERE pay.Status = 'Pending' AND pol.Company_Id = $1
+          GROUP BY DATE_TRUNC('month', pay.Payment_Date)
         ) p ON p.m = DATE_TRUNC('month', d)
         ORDER BY d ASC
-      `);
+      `, [companyId]);
       return {
         customers: customersRes.rows.map(r => r.value || 0),
         policies: policiesRes.rows.map(r => r.value || 0),
@@ -1134,7 +1131,6 @@ export const dbService = {
       };
     }
 
-    // Sim engine — deterministic monthly shape derived from current counts
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const cur = new Date().getMonth();
     const series = Array.from({ length: 12 }, (_, i) => {
@@ -1152,8 +1148,8 @@ export const dbService = {
     };
   },
 
-  // Upcoming tasks derived from pending payment installments + open claims
-  getUpcomingTasks: async () => {
+  // Upcoming tasks from pending payments + open claims
+  getUpcomingTasks: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const tasks: any[] = [];
       const payRes = await executeQuery(`
@@ -1162,10 +1158,10 @@ export const dbService = {
         FROM PAYMENT_SCHEDULES ps
         JOIN POLICIES p ON ps.Policy_Id = p.Policy_Id
         JOIN CUSTOMER c ON p.Customer_Id = c.Customer_Id
-        WHERE ps.Status = 'Pending' AND ps.Due_Date >= CURRENT_DATE
+        WHERE ps.Status = 'Pending' AND ps.Due_Date >= CURRENT_DATE AND p.Company_Id = $1
         ORDER BY ps.Due_Date ASC
         LIMIT 5
-      `);
+      `, [companyId]);
       payRes.rows.forEach((r: any) => {
         const d = new Date(r.Due_Date);
         tasks.push({
@@ -1183,10 +1179,10 @@ export const dbService = {
         FROM CLAIMS cl
         JOIN POLICIES p ON cl.Policy_Id = p.Policy_Id
         JOIN CUSTOMER c ON p.Customer_Id = c.Customer_Id
-        WHERE cl.Status IN ('Filed', 'Under_Review', 'Assigned')
+        WHERE cl.Status IN ('Filed', 'Under_Review', 'Assigned') AND p.Company_Id = $1
         ORDER BY cl.Incident_Date DESC
         LIMIT 3
-      `);
+      `, [companyId]);
       claimRes.rows.forEach((r: any) => {
         const d = new Date(r.Incident_Date);
         tasks.push({
@@ -1240,20 +1236,25 @@ export const dbService = {
     return tasks;
   },
 
-  // Aggregated claims KPIs for the Claims page header cards
-  getClaimsKpis: async () => {
+  // Claims KPIs for header cards
+  getClaimsKpis: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const openRes = await executeQuery(`
-        SELECT COUNT(*)::int as cnt FROM CLAIMS
-        WHERE Status IN ('Filed', 'Assigned', 'Under_Review')
-      `);
+        SELECT COUNT(*)::int as cnt FROM CLAIMS cl
+        JOIN POLICIES p ON cl.Policy_Id = p.Policy_Id
+        WHERE cl.Status IN ('Filed', 'Assigned', 'Under_Review') AND p.Company_Id = $1
+      `, [companyId]);
       const settledRes = await executeQuery(`
-        SELECT COUNT(*)::int as cnt FROM CLAIMS WHERE Status IN ('Paid', 'Closed')
-      `);
+        SELECT COUNT(*)::int as cnt FROM CLAIMS cl
+        JOIN POLICIES p ON cl.Policy_Id = p.Policy_Id
+        WHERE cl.Status IN ('Paid', 'Closed') AND p.Company_Id = $1
+      `, [companyId]);
       const avgRes = await executeQuery(`
-        SELECT AVG(EXTRACT(DAY FROM (NOW() - Incident_Date)))::float as avg_days
-        FROM CLAIMS WHERE Status IN ('Approved', 'Paid', 'Closed')
-      `);
+        SELECT AVG(EXTRACT(DAY FROM (NOW() - cl.Incident_Date)))::float as avg_days
+        FROM CLAIMS cl
+        JOIN POLICIES p ON cl.Policy_Id = p.Policy_Id
+        WHERE cl.Status IN ('Approved', 'Paid', 'Closed') AND p.Company_Id = $1
+      `, [companyId]);
       return {
         open: openRes.rows[0]?.cnt || 0,
         settled: settledRes.rows[0]?.cnt || 0,
@@ -1272,8 +1273,8 @@ export const dbService = {
     return { open, settled, avgResolutionDays: avg };
   },
 
-  // Agent performance metrics joined with their policies + commissions
-  getAgentPerformance: async () => {
+  // Agent performance: policies + commissions
+  getAgentPerformance: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const res = await executeQuery(`
         SELECT
@@ -1291,8 +1292,9 @@ export const dbService = {
           ), 0)::int as paid_commissions
         FROM AGENT a
         LEFT JOIN BRANCH b ON a.Branch_Id = b.Branch_Id
+        WHERE b.Company_Id = $1
         ORDER BY a.Agent_Id ASC
-      `);
+      `, [companyId]);
       return res.rows.map((r: any) => {
         const commRate = parseFloat(r.Commission_Rate) || 0;
         const role = commRate >= 15 ? 'Senior Agent' : commRate >= 12 ? 'Agent' : 'Junior Agent';
@@ -1336,8 +1338,8 @@ export const dbService = {
     });
   },
 
-  // Branches enriched with first phone + count of assigned agents
-  getBranchesWithStats: async () => {
+  // Branches with phone + agent count
+  getBranchesWithStats: async (companyId: number = 1) => {
     if (dbState.isRealPostgres) {
       const res = await executeQuery(`
         SELECT b.*,
@@ -1345,8 +1347,9 @@ export const dbService = {
           (SELECT COUNT(*)::int FROM AGENT a WHERE a.Branch_Id = b.Branch_Id) as agent_count,
           (SELECT COUNT(*)::int FROM POLICIES p WHERE p.Branch_Id = b.Branch_Id) as policy_count
         FROM BRANCH b
+        WHERE b.Company_Id = $1
         ORDER BY b.Branch_Id ASC
-      `);
+      `, [companyId]);
       return res.rows;
     }
 
@@ -1358,7 +1361,7 @@ export const dbService = {
     }));
   },
 
-  // Companies enriched with plan + policy + payment aggregates
+  // Companies with plan/policy/payment aggregates
   getCompaniesWithStats: async () => {
     if (dbState.isRealPostgres) {
       const res = await executeQuery(`
@@ -1415,7 +1418,30 @@ export const dbService = {
     });
   },
 
-  // Global search across customers, policies, and claims
+  // ─── Audit Log ───
+  recordAuditLog: async (userId: number, action: string, entityType: string, entityId: number | null, details: any = null, ipAddress: string | null = null) => {
+    if (dbState.isRealPostgres) {
+      await executeQuery(
+        'INSERT INTO AUDIT_LOG (User_Id, Action, Entity_Type, Entity_Id, Details, Ip_Address) VALUES ($1, $2, $3, $4, $5, $6)',
+        [userId, action, entityType, entityId, details ? JSON.stringify(details) : null, ipAddress]
+      );
+      return;
+    }
+    const newId = simDb.audit_log.length > 0 ? Math.max(...simDb.audit_log.map(l => l.Audit_Id)) + 1 : 1;
+    simDb.audit_log.unshift({
+      Audit_Id: newId,
+      User_Id: userId,
+      Action: action,
+      Entity_Type: entityType,
+      Entity_Id: entityId,
+      Details: details,
+      Ip_Address: ipAddress,
+      Created_At: new Date().toISOString()
+    });
+    persistDb();
+  },
+
+  // Search customers, policies, and claims
   globalSearch: async (q: string) => {
     const like = `%${q}%`;
     if (dbState.isRealPostgres) {

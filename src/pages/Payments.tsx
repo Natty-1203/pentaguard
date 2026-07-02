@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
@@ -48,6 +49,7 @@ function MethodBadge({ method }: { method: string }) {
 }
 
 export default function PaymentsPage() {
+  const { selectedCompanyId } = useTenant();
   const [payments, setPayments] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [activeMethod, setActiveMethod] = useState('All');
@@ -62,7 +64,7 @@ export default function PaymentsPage() {
 
   const fetchPayments = async () => {
     try {
-      const res = await fetch('/api/payments');
+      const res = await fetch(`/api/payments?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const rawData = await res.json();
         const mapped = rawData.map((dbRow: any, idx: number) => ({
@@ -84,7 +86,7 @@ export default function PaymentsPage() {
 
   const fetchSchedules = async () => {
     try {
-      const res = await fetch('/api/payment-schedules');
+      const res = await fetch(`/api/payment-schedules?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const rawData = await res.json();
         const mapped = rawData.map((dbRow: any, idx: number) => ({
@@ -111,7 +113,7 @@ export default function PaymentsPage() {
   const handleCreatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/payments', {
+      const res = await fetch(`/api/payments?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,7 +135,7 @@ export default function PaymentsPage() {
 
   const handleUpdatePaymentStatus = async (dbId: number, status: string) => {
     try {
-      const res = await fetch(`/api/payments/${dbId}`, {
+      const res = await fetch(`/api/payments/${dbId}?companyId=${selectedCompanyId ?? 1}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ Status: status })
@@ -149,7 +151,7 @@ export default function PaymentsPage() {
   const handleDeletePayment = async (dbId: number) => {
     if (confirm('Are you sure you want to delete this payment record?')) {
       try {
-        const res = await fetch(`/api/payments/${dbId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/payments/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
         if (res.ok) {
           await fetchPayments();
         }
@@ -593,7 +595,7 @@ export default function PaymentsPage() {
                   required
                   value={newPayment.policyId}
                   onChange={e => setNewPayment(prev => ({ ...prev, policyId: e.target.value }))}
-                  placeholder="POL-0001"
+                  placeholder="Policy number"
                   className="h-10 border-gray-200"
                 />
               </div>
@@ -606,7 +608,7 @@ export default function PaymentsPage() {
                   step="any"
                   value={newPayment.amount}
                   onChange={e => setNewPayment(prev => ({ ...prev, amount: e.target.value }))}
-                  placeholder="e.g. 5000"
+                  placeholder="Amount"
                   className="h-10 border-gray-200"
                 />
               </div>

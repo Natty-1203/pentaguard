@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { Input } from '@/src/components/ui/input';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useTenant } from '@/src/lib/TenantContext';
+import { useAuth } from '@/src/lib/AuthContext';
 
 interface SearchResult {
   id: string;
@@ -16,34 +18,15 @@ interface SearchResult {
 export function Topbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  // Dynamic role synchronization
-  const [role, setRole] = useState(() => localStorage.getItem('user-role') || 'admin');
-
-  useEffect(() => {
-    const handleGlobalRoleChanged = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail && detail !== role) {
-        setRole(detail);
-      }
-    };
-    window.addEventListener('user-role-changed', handleGlobalRoleChanged);
-    return () => window.removeEventListener('user-role-changed', handleGlobalRoleChanged);
-  }, [role]);
-
-  const handleRoleChange = (newRole: string) => {
-    localStorage.setItem('user-role', newRole);
-    setRole(newRole);
-    window.dispatchEvent(new CustomEvent('user-role-changed', { detail: newRole }));
-  };
+  const { user, logout } = useAuth();
 
   const getRoleLabel = () => {
-    if (role === 'agent') return "Agent";
-    if (role === 'claim_staff') return "Claim Staff";
+    if (!user) return "Company Admin";
+    if (user.role === 'agent') return "Agent";
+    if (user.role === 'claim_staff') return "Claim Staff";
+    if (user.role === 'super_admin') return "Super Admin";
     return "Company Admin";
   };
-
-  // Interactive UI configurations
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -51,17 +34,12 @@ export function Topbar() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showTenantDropdown, setShowTenantDropdown] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-
-  // Nile Insurance state managers
-  const [tenant, setTenant] = useState('Loading company…');
+  const { companies, selectedCompanyId, selectedBranchId, selectCompany, selectBranch, selectedCompany, loading } = useTenant();
+  const [branches, setBranches] = useState<any[]>([]);
   const [adminName, setAdminName] = useState('Company Admin');
   const [adminEmail, setAdminEmail] = useState('');
-  const [branches, setBranches] = useState<any[]>([]);
-  const [activeBranchId, setActiveBranchId] = useState<number | null>(null);
 
   const [notifications, setNotifications] = useState<any[]>([]);
-
-  // Live search results
   const [searchResults, setSearchResults] = useState<{ customers: SearchResult[]; policies: SearchResult[]; claims: SearchResult[] }>({
     customers: [], policies: [], claims: []
   });
@@ -70,32 +48,23 @@ export function Topbar() {
   const profileBoxRef = useRef<HTMLDivElement>(null);
   const tenantBoxRef = useRef<HTMLDivElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
-
-  // Load company profile + branches for tenant switcher
   useEffect(() => {
-    const fetchTenant = async () => {
+    if (!selectedCompanyId) return;
+    const fetchBranches = async () => {
       try {
-        const cRes = await fetch('/api/company');
-        if (cRes.ok) {
-          const c = await cRes.json();
-          if (c.Company_Name) setTenant(`${c.Company_Name} (Headquarters)`);
-        }
-        const bRes = await fetch('/api/branches');
-        if (bRes.ok) {
-          const data = await bRes.json();
+        const res = await fetch(`/api/branches?companyId=${selectedCompanyId}`);
+        if (res.ok) {
+          const data = await res.json();
           setBranches(data);
-          if (data.length > 0) setActiveBranchId(data[0].Branch_Id);
         }
-      } catch (e) { console.error('Tenant load failed:', e); }
+      } catch (e) { console.error('Branch load failed:', e); }
     };
-    fetchTenant();
-  }, []);
-
-  // Load latest 5 notifications from the database
+    fetchBranches();
+  }, [selectedCompanyId]);
   useEffect(() => {
     const fetchNotifs = async () => {
       try {
-        const res = await fetch('/api/notifications');
+        const res = await fetch(`/api/notifications?companyId=${selectedCompanyId ?? 1}`);
         if (res.ok) {
           const data = await res.json();
           const mapped = (data || []).slice(0, 5).map((n: any) => ({
@@ -111,8 +80,6 @@ export function Topbar() {
     };
     fetchNotifs();
   }, []);
-
-  // Debounced live search across customers, policies, and claims
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q) {
@@ -140,8 +107,6 @@ export function Topbar() {
     ...searchResults.policies.map(r => ({ type: 'policy', result: r })),
     ...searchResults.claims.map(r => ({ type: 'claim', result: r }))
   ];
-
-  // Click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement;
@@ -161,8 +126,6 @@ export function Topbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Keyboard shortcut (Ctrl + /) to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '/') {
@@ -196,11 +159,7 @@ export function Topbar() {
     setSearchFocused(false);
     navigate(path);
   };
-
-  // Find matches
   const searchMatches = allMatches;
-
-  // Dispatch mobile menu drawer event
   const toggleMobileSidebar = () => {
     window.dispatchEvent(new Event('toggle-sidebar'));
   };
@@ -389,38 +348,62 @@ export function Topbar() {
             className="flex items-center gap-1.5 text-xs text-gray-700 hover:text-gray-950 font-semibold cursor-pointer py-1.5 px-2.5 rounded-lg hover:bg-gray-150/50 transition-colors"
           >
             <Building2 className="w-4 h-4 text-blue-600" />
-            <span className="max-w-[150px] truncate">{tenant}</span> 
+            <span className="max-w-[150px] truncate">{loading ? 'Loading…' : selectedCompany ? `${selectedCompany.Company_Name}${selectedBranchId ? ` › #${selectedBranchId}` : ''}` : 'No company'}</span> 
             <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
           </div>
 
           {showTenantDropdown && (
-            <div className="absolute right-0 mt-1.5 w-60 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-1 divide-y divide-gray-100 animate-in fade-in slide-in-from-top-1 duration-100">
+            <div className="absolute right-0 mt-1.5 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-1 divide-y divide-gray-100 animate-in fade-in slide-in-from-top-1 duration-100">
               <div className="px-2.5 py-1.5">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Insurance S.C</p>
-                <p className="text-xs font-semibold text-gray-900 mt-0.5">{tenant.replace(' (Headquarters)', '')}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Switch Company</p>
               </div>
               <div className="py-1 max-h-60 overflow-y-auto">
-                {branches.length === 0 ? (
-                  <p className="text-[11px] text-gray-500 px-2.5 py-2">No branches registered.</p>
-                ) : branches.map((b) => (
+                {companies.length === 0 ? (
+                  <p className="text-[11px] text-gray-500 px-2.5 py-2">No companies found.</p>
+                ) : companies.map((c) => (
                   <button
-                    key={b.Branch_Id}
+                    key={c.Company_Id}
                     onClick={() => {
-                      setTenant(`${b.Branch_Name} (#${b.Branch_Id})`);
-                      setActiveBranchId(b.Branch_Id);
+                      selectCompany(c.Company_Id);
                       setShowTenantDropdown(false);
                     }}
                     className={`w-full text-left text-xs font-semibold py-1.5 px-2.5 rounded-lg block transition-colors ${
-                      activeBranchId === b.Branch_Id
+                      selectedCompanyId === c.Company_Id
                         ? 'bg-blue-50 text-blue-600'
                         : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="truncate">{b.Branch_Name}</div>
-                    <div className="text-[10px] text-gray-400 font-normal">{b.City}, {b.Region}</div>
+                    <div className="truncate">{c.Company_Name}</div>
+                    <div className="text-[10px] text-gray-400 font-normal">{c.Head_Office_Address || c.Headquarters_Location || ''}</div>
                   </button>
                 ))}
               </div>
+              {branches.length > 0 && (
+                <>
+                  <div className="px-2.5 py-1.5">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Branches</p>
+                  </div>
+                  <div className="py-1 max-h-60 overflow-y-auto">
+                    {branches.map((b) => (
+                      <button
+                        key={b.Branch_Id}
+                        onClick={() => {
+                          selectBranch(b.Branch_Id);
+                          setShowTenantDropdown(false);
+                        }}
+                        className={`w-full text-left text-xs font-semibold py-1.5 px-2.5 rounded-lg block transition-colors ${
+                          selectedBranchId === b.Branch_Id
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="truncate">{b.Branch_Name}</div>
+                        <div className="text-[10px] text-gray-400 font-normal">{b.City}, {b.Region}</div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -437,7 +420,7 @@ export function Topbar() {
               className="w-8 h-8 rounded-full border border-gray-200 hover:scale-105 transition-transform" 
             />
             <div className="hidden lg:block text-left">
-              <div className="font-semibold text-xs text-gray-900 leading-tight">{adminName}</div>
+              <div className="font-semibold text-xs text-gray-900 leading-tight">{user ? `${user.firstName} ${user.lastName}` : 'User'}</div>
               <div className="text-[10px] text-gray-500 font-medium leading-none mt-0.5">{getRoleLabel()}</div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden lg:block" />
@@ -446,38 +429,11 @@ export function Topbar() {
           {showProfileDropdown && (
             <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-1 animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="px-3 py-2 border-b border-gray-100 bg-slate-50/50 rounded-t-xl">
-                <p className="font-bold text-xs text-gray-900">{adminName}</p>
-                <p className="text-[10px] text-gray-400 font-mono mt-0.5">{adminEmail}</p>
+                <p className="font-bold text-xs text-gray-900">{user ? `${user.firstName} ${user.lastName}` : 'User'}</p>
+                <p className="text-[10px] text-gray-400 font-mono mt-0.5">{user?.email || ''}</p>
                 <p className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded px-1.5 py-0.5 mt-1.5 inline-block">Role: {getRoleLabel()}</p>
               </div>
               <div className="py-1">
-                <div className="px-3 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">Switch Acting Role</div>
-                <button 
-                  onClick={() => { handleRoleChange('admin'); setShowProfileDropdown(false); }}
-                  className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs font-semibold ${role === 'admin' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-750 hover:text-gray-950 hover:bg-gray-55'}`}
-                >
-                  <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500"></span> Company Admin
-                </button>
-                <button 
-                  onClick={() => { handleRoleChange('agent'); setShowProfileDropdown(false); }}
-                  className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs font-semibold ${role === 'agent' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-750 hover:text-gray-950 hover:bg-gray-55'}`}
-                >
-                  <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500"></span> Agent (Abebe K.)
-                </button>
-                <button 
-                  onClick={() => { handleRoleChange('claim_staff'); setShowProfileDropdown(false); }}
-                  className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs font-semibold ${role === 'claim_staff' ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-750 hover:text-gray-950 hover:bg-gray-55'}`}
-                >
-                  <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Claim Staff
-                </button>
-                <div className="h-px bg-gray-100 my-1"></div>
-
-                <button 
-                  onClick={() => { setShowEditProfile(true); setShowProfileDropdown(false); }}
-                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:text-gray-950 hover:bg-gray-50"
-                >
-                  <User className="w-3.5 h-3.5 text-gray-400" /> Edit Profile Details
-                </button>
                 <Link 
                   to="/settings"
                   onClick={() => setShowProfileDropdown(false)}
@@ -485,17 +441,19 @@ export function Topbar() {
                 >
                   <Settings className="w-3.5 h-3.5 text-gray-400" /> Portal Configurations
                 </Link>
-                <Link 
-                  to="/admin/companies"
-                  onClick={() => setShowProfileDropdown(false)}
-                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-purple-600 hover:bg-purple-50"
-                >
-                  <Shield className="w-3.5 h-3.5" /> Super Admin Portal
-                </Link>
+                {user?.role === 'super_admin' ? (
+                  <Link 
+                    to="/admin/companies"
+                    onClick={() => setShowProfileDropdown(false)}
+                    className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-purple-600 hover:bg-purple-50"
+                  >
+                    <Shield className="w-3.5 h-3.5" /> Super Admin Portal
+                  </Link>
+                ) : null}
               </div>
               <div className="pt-1 border-t border-gray-100">
                 <button 
-                  onClick={() => navigate('/login')}
+                  onClick={() => { logout(); navigate('/login'); }}
                   className="w-full text-left flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="w-3.5 h-3.5" /> Log Out Session

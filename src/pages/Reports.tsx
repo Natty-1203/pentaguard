@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Badge } from '@/src/components/ui/badge';
@@ -15,36 +16,29 @@ import {
   Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 
-// allMonthlyData removed – now fetched from /api/analytics/monthly
 
 
-// Agent data is now fetched live from the database – see useEffect below
 
 export default function ReportsPage() {
+  const { selectedCompanyId } = useTenant();
   const [activeTab, setActiveTab] = useState('Financial');
   const [dateRange, setDateRange] = useState('Full Year 2024');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  
-  // Export process state
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState('PDF Report Dossier');
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [exportStep, setExportStep] = useState('');
   const [downloadReady, setDownloadReady] = useState(false);
-  
-  // Agent sorting and filter search
   const [agentSearch, setAgentSearch] = useState('');
   const [agentSort, setAgentSort] = useState('policies'); // 'policies' | 'premium' | 'performance'
   const [agents, setAgents] = useState<any[]>([]);
   const [allMonthlyData, setAllMonthlyData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Fetch real analytics data
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch('/api/analytics/monthly');
+        const res = await fetch(`/api/analytics/monthly?companyId=${selectedCompanyId ?? 1}`);
         if (!res.ok) throw new Error('Failed to fetch analytics');
         const data = await res.json();
         setAllMonthlyData(data);
@@ -54,12 +48,10 @@ export default function ReportsPage() {
     };
     fetchAnalytics();
   }, []);
-
-  // Fetch agent performance data from backend
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const res = await fetch('/api/agent-performance');
+        const res = await fetch(`/api/agent-performance?companyId=${selectedCompanyId ?? 1}`);
         if (!res.ok) throw new Error('Failed to fetch agent performance');
         const rawData = await res.json();
         const mapped = rawData.map((dbRow: any) => {
@@ -97,8 +89,6 @@ export default function ReportsPage() {
     'First Half 2024',
     'Second Half 2024'
   ];
-
-  // Dynamically filter monthlyData based on selected date range
   const getFilteredMonthlyData = () => {
     switch(dateRange) {
       case 'Q1 2024 (Jan - Mar)':
@@ -119,17 +109,11 @@ export default function ReportsPage() {
   };
 
   const monthlyData = getFilteredMonthlyData();
-
-  // Dynamically compute KPIs based on filtered monthlyData
   const sumRevenue = monthlyData.reduce((sum, item) => sum + (item.revenue || 0), 0);
   const sumClaims = monthlyData.reduce((sum, item) => sum + (item.claims || 0), 0);
-  // Extrapolate policy counts based on length of months shown
   const policiesIssued = Math.round(monthlyData.reduce((sum, item) => sum + ((item.cumulativePolicies || (item.revenue / 2)) / 12), 0) * 1.5);
-  // Average calculation
   const avgSla = Math.round(monthlyData.reduce((sum, item) => sum + (item.operationalSla || 95), 0) / (monthlyData.length || 1));
   const commissionPaid = Math.round(sumRevenue * 0.03); // Simulated 3% commission
-
-  // Handlers
   const handleDatePickerClick = (range: string) => {
     setDateRange(range);
     setIsDatePickerOpen(false);
@@ -143,12 +127,12 @@ export default function ReportsPage() {
     setDownloadReady(false);
     
     const steps = [
-      'Establishing connection with Penta Core Storage...',
-      'Compiling database logs & financial tables...',
-      'Calculating cryptographic telemetry indicators...',
-      'Generating high-definition vector analytics SVGs...',
-      'Bundling payload assets & appending digital audit seal...',
-      'Finalizing report, preparing local system download!'
+      'Connecting to storage...',
+      'Compiling report data...',
+      'Generating analytics...',
+      'Rendering visualizations...',
+      'Packaging report assets...',
+      'Preparing download...'
     ];
 
     setExportStep(steps[0]);
@@ -171,7 +155,6 @@ export default function ReportsPage() {
   };
 
   const handleDownloadFile = () => {
-    // Generate a simple CSV mock text
     const textData = `Penta Guard Insurance Official Export - ${dateRange}\nFormat: ${exportFormat}\nTotal Revenue: ETB ${sumRevenue}K\nClaims Settled: ETB ${sumClaims}K\nAverage SLA: ${avgSla}%\nCommission Paid: ETB ${commissionPaid}K\nTimestamp: May 31, 2026\n`;
     const blob = new Blob([textData], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -183,8 +166,6 @@ export default function ReportsPage() {
     document.body.removeChild(link);
     setIsExportModalOpen(false);
   };
-
-  // Agent filtering & sorting logic
   const filteredAgents = agents
     .filter(agent => 
       agent.name.toLowerCase().includes(agentSearch.toLowerCase()) || 
@@ -272,7 +253,6 @@ export default function ReportsPage() {
             key={tab}
             onClick={() => {
               setActiveTab(tab);
-              // Trigger a mild visual feedback click or status log
             }}
             className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-all ${
               activeTab === tab 
@@ -519,7 +499,7 @@ export default function ReportsPage() {
                   <div className="space-y-2">
                     <button 
                       onClick={() => {
-                        alert(`Re-syncing analytics telemetry databases with Penta Core CRM logs... Successful!`);
+                        console.info(`Re-syncing analytics telemetry databases with Penta Core CRM logs... Successful!`);
                       }}
                       className="w-full text-left py-2 px-3 hover:bg-white rounded border border-transparent hover:border-gray-200 text-xs font-bold text-gray-700 flex items-center justify-between transition-all group"
                     >

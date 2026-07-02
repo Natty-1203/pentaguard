@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -13,6 +14,7 @@ import {
 import { StatusBadge } from '@/src/components/ui/status-badge';
 
 export default function ClaimsPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,7 +29,7 @@ export default function ClaimsPage() {
 
   const fetchClaims = async () => {
     try {
-      const res = await fetch('/api/claims');
+      const res = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const rawData = await res.json();
 
@@ -50,7 +52,7 @@ export default function ClaimsPage() {
 
   const fetchKpis = async () => {
     try {
-      const res = await fetch('/api/claims/kpis');
+      const res = await fetch(`/api/claims/kpis?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) setKpis(await res.json());
     } catch (err) { console.error(err); }
   };
@@ -65,11 +67,11 @@ export default function ClaimsPage() {
     try {
       const parsedId = parseInt(newClaim.policyId.replace(/\D/g, ''), 10);
       if (isNaN(parsedId) || parsedId <= 0) {
-         window.alert('Please enter a valid numeric Policy ID (e.g., POL-123).');
+         console.warn('Please enter a valid numeric Policy ID (e.g., POL-123).');
          return;
       }
 
-      const res = await fetch('/api/claims', {
+      const res = await fetch(`/api/claims?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,17 +86,17 @@ export default function ClaimsPage() {
         setNewClaim({ policyId: '', description: '' });
       } else {
         const errData = await res.json();
-        window.alert(`Error creating claim: ${errData.error || 'Database constraint violation'}`);
+        console.warn(`Error creating claim: ${errData.error || 'Database constraint violation'}`);
       }
     } catch (err) {
       console.error(err);
-      window.alert('Unexpected error occurred while filing the claim.');
+      console.warn('Unexpected error occurred while filing the claim.');
     }
   };
 
   const handleDeleteClaim = async (dbId: number) => {
     try {
-      const res = await fetch(`/api/claims/${dbId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/claims/${dbId}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
       if (res.ok) await fetchClaims();
     } catch (err) {
       console.error(err);
@@ -142,7 +144,7 @@ export default function ClaimsPage() {
             <form onSubmit={handleAddClaim} className="p-5 space-y-4 text-xs">
               <div>
                 <label className="block text-gray-700 font-bold mb-1.5">Policy ID</label>
-                <Input required value={newClaim.policyId} onChange={e => setNewClaim(prev => ({...prev, policyId: e.target.value}))} placeholder="POL-XXX" />
+                <Input required value={newClaim.policyId} onChange={e => setNewClaim(prev => ({...prev, policyId: e.target.value}))} placeholder="Policy number" />
               </div>
               <div>
                 <label className="block text-gray-700 font-bold mb-1.5">Description / Incident Notes</label>

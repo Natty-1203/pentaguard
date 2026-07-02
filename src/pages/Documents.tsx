@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTenant } from '@/src/lib/TenantContext';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function DocumentsPage() {
+  const { selectedCompanyId } = useTenant();
   const [data, setData] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<any>(null);
@@ -19,7 +21,7 @@ export default function DocumentsPage() {
 
   const fetchDocuments = async () => {
     try {
-      const res = await fetch('/api/documents');
+      const res = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`);
       if (res.ok) {
         const rawData = await res.json();
         const mapped = rawData.map((dbRow: any, idx: number) => ({
@@ -42,8 +44,6 @@ export default function DocumentsPage() {
   useEffect(() => {
     fetchDocuments();
   }, []);
-
-  // Advanced metadata registration form states
   const [selectedFile, setSelectedFile] = useState<{ name: string; size: string; type: string } | null>(null);
   const [docTitle, setDocTitle] = useState('');
   const [docCategory, setDocCategory] = useState('Policy Contract');
@@ -52,12 +52,10 @@ export default function DocumentsPage() {
   const [fileType, setFileType] = useState('PDF');
   const [uploader, setUploader] = useState('Loading…');
   const [remarks, setRemarks] = useState('');
-
-  // Load current uploader from claim_staff table (first active staff)
   useEffect(() => {
     const loadUploader = async () => {
       try {
-        const res = await fetch('/api/claim-staff');
+        const res = await fetch(`/api/claim-staff?companyId=${selectedCompanyId ?? 1}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
@@ -83,8 +81,6 @@ export default function DocumentsPage() {
     const sizeStr = file.size > 1024 * 1024 
       ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
       : `${Math.round(file.size / 1024)} KB`;
-    
-    // Auto-detect extension based file type
     let typeGuessed = 'PDF';
     const lowName = file.name.toLowerCase();
     if (lowName.endsWith('.pdf')) {
@@ -104,8 +100,6 @@ export default function DocumentsPage() {
     });
     setDocTitle(file.name);
     setFileType(typeGuessed);
-    
-    // Auto guess category & reference ID based on file name strings
     if (lowName.includes('claim') || lowName.includes('police') || lowName.includes('clm')) {
       setDocCategory('Claims Evidence');
       setBelongsToType('Specific Claim');
@@ -146,7 +140,7 @@ export default function DocumentsPage() {
     if (!selectedFile) return;
 
     try {
-      const res = await fetch('/api/documents', {
+      const res = await fetch(`/api/documents?companyId=${selectedCompanyId ?? 1}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,7 +159,7 @@ export default function DocumentsPage() {
     e.stopPropagation();
     if (confirm("Are you sure you want to permanently delete this document record from the vault?")) {
       try {
-        const res = await fetch(`/api/documents/${parseInt(id.replace('DOC-',''), 10)}`, { method: 'DELETE' });
+        const res = await fetch(`/api/documents/${parseInt(id.replace('DOC-',''), 10)}?companyId=${selectedCompanyId ?? 1}`, { method: 'DELETE' });
         if (res.ok) await fetchDocuments();
       } catch (err) { console.error(err); }
       if (viewingDoc?.id === id) {
@@ -182,8 +176,6 @@ export default function DocumentsPage() {
       default: return <File className="w-5 h-5 text-gray-500" />;
     }
   };
-
-  // Filter & Search Implementation
   const filteredData = data.filter(item => {
     const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
     const matchesSearch = !searchQuery || 
@@ -489,7 +481,7 @@ export default function DocumentsPage() {
                              <Button variant="ghost" size="icon" onClick={() => setViewingDoc(doc)} className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Preview Document">
                                <Eye className="w-4 h-4" />
                              </Button>
-                             <Button variant="ghost" size="icon" onClick={() => alert(`Simulating payload download for file ${doc.name} (${doc.size}). Check your downloads.`) } className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50">
+                              <Button variant="ghost" size="icon" onClick={() => console.info(`Simulating payload download for file ${doc.name} (${doc.size}). Check your downloads.`) } className="h-8 w-8 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50">
                                <Download className="w-4 h-4" />
                              </Button>
                              <Button variant="ghost" size="icon" onClick={(e) => handleDeleteDoc(doc.id, e)} className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50">
@@ -593,7 +585,7 @@ export default function DocumentsPage() {
                 </button>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="text-gray-700" onClick={() => setViewingDoc(null)}>Close Preview</Button>
-                  <Button size="sm" onClick={() => alert(`Downloading ${viewingDoc.name}`)} className="bg-blue-600 text-white hover:bg-blue-700 font-black flex items-center gap-1.5 shadow">
+                   <Button size="sm" onClick={() => console.info(`Downloading ${viewingDoc.name}`)} className="bg-blue-600 text-white hover:bg-blue-700 font-black flex items-center gap-1.5 shadow">
                     <Download className="w-3.5 h-3.5" /> Download file ({viewingDoc.size})
                   </Button>
                 </div>
